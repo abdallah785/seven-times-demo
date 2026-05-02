@@ -1,0 +1,1639 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-title" content="Seven Times">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Seven Times — Halal Burgers & Cheese Naans</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23000'/%3E%3Ctext x='50' y='74' font-size='64' text-anchor='middle' font-weight='900' font-family='Arial' fill='%23FFD200'%3E7%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --primary:#FFD200;
+    --primary-dark:#d4af00;
+    --bg:#000;
+    --bubble-bot:#1a1a1a;
+    --bubble-user:#FFD200;
+    --bubble-user-text:#000;
+    --text:#fff;
+    --text-dim:#888;
+    --avatar-bg:#FFD200;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  /* height JS-controllée via visualViewport pour rester collé au viewport visible (clavier mobile inclus) */
+  body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;height:100svh;height:100dvh;overscroll-behavior:none;position:fixed;inset:0}
+
+  .header{
+    background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);
+    color:#000;
+    padding:calc(12px + env(safe-area-inset-top)) 16px 12px;display:flex;align-items:center;gap:12px;
+    box-shadow:0 2px 10px rgba(0,0,0,.5);z-index:50;flex-shrink:0;
+    position:sticky;top:0
+  }
+  .avatar{width:42px;height:42px;border-radius:50%;background:#000;display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--primary);font-size:22px;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+  .header-info{flex:1;min-width:0;color:#000}
+  .header-info .name{font-weight:800;font-size:16px;letter-spacing:.2px}
+  .header-info .status{font-size:13px;opacity:.85;display:flex;align-items:center;gap:5px;margin-top:1px}
+  .dot{width:8px;height:8px;border-radius:50%;background:#15803d;box-shadow:0 0 6px #15803d}
+  .header-icons{display:flex;gap:6px}
+  .icon-btn{width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.18);border:none;color:#000;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+  .icon-btn:active{background:rgba(0,0,0,.35);transform:scale(.92)}
+
+  /* Bandeaux commande — style brief */
+  .banners{flex-shrink:0;background:var(--bg);z-index:5}
+  .order-banner{
+    padding:12px 14px;font-size:13.5px;font-weight:600;
+    border-bottom:1px solid;animation:slideDown .35s cubic-bezier(0.4, 0, 0.2, 1);
+    position:relative
+  }
+  .banner-row{display:flex;align-items:center;gap:10px}
+  .banner-text{flex:1;line-height:1.35}
+  .banner-text b{font-weight:800}
+  .order-banner.pending{
+    background:rgba(255,77,46,.15);
+    border-color:rgba(255,77,46,.35);
+    color:#ff8a6c
+  }
+  .order-banner.accepted{
+    background:rgba(34,197,94,.15);
+    border-color:rgba(34,197,94,.35);
+    color:#4ade80
+  }
+  .banner-btn{
+    background:rgba(34,197,94,.2);
+    border:1px solid rgba(34,197,94,.5);
+    color:#4ade80;
+    padding:7px 13px;border-radius:10px;font-size:12.5px;font-weight:700;
+    cursor:pointer;font-family:inherit;white-space:nowrap;transition:.2s
+  }
+  .banner-btn:active{background:rgba(34,197,94,.35);transform:scale(.95)}
+  .banner-icon{display:inline-block;animation:iconPulse 1.5s ease-in-out infinite;font-size:16px}
+  .banner-progress{
+    height:3px;background:rgba(34,197,94,.2);border-radius:2px;
+    margin-top:8px;overflow:hidden
+  }
+  .banner-progress-fill{
+    height:100%;background:#4ade80;width:5%;
+    animation:progressFill 60s linear forwards;
+    box-shadow:0 0 6px rgba(74,222,128,.6)
+  }
+  .pulse-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:currentColor;animation:pulse 1.2s infinite;flex-shrink:0}
+  @keyframes slideDown{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  @keyframes iconPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+  @keyframes progressFill{from{width:5%}to{width:95%}}
+
+  .chat{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:10px;-webkit-overflow-scrolling:touch}
+  .chat::-webkit-scrollbar{width:0}
+
+  .msg{display:flex;gap:8px;align-items:flex-end;animation:fadeIn .25s ease-out}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .msg.user{justify-content:flex-end}
+  .mini-avatar{width:30px;height:30px;border-radius:50%;background:var(--avatar-bg);display:flex;align-items:center;justify-content:center;font-weight:700;color:#000;font-size:13px;flex-shrink:0}
+  .bubble-wrap{display:flex;flex-direction:column;max-width:80%}
+  .msg.user .bubble-wrap{align-items:flex-end}
+  .bubble{padding:11px 15px;border-radius:18px;font-size:15px;line-height:1.45;word-wrap:break-word;white-space:pre-wrap;overflow-wrap:break-word}
+  .msg.bot .bubble{background:var(--bubble-bot);color:#f5f5f5;border-bottom-left-radius:4px}
+  .msg.user .bubble{background:var(--bubble-user);color:#000;border-bottom-right-radius:4px;font-weight:600}
+  .timestamp{font-size:10.5px;color:var(--text-dim);margin-top:3px;padding:0 4px}
+
+  .typing{display:flex;gap:4px;padding:6px 4px}
+  .typing span{width:7px;height:7px;border-radius:50%;background:#888;animation:bounce 1.3s infinite}
+  .typing span:nth-child(2){animation-delay:.15s}
+  .typing span:nth-child(3){animation-delay:.3s}
+  @keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-6px);opacity:1}}
+
+  /* Choice buttons sous les messages bot */
+  .choice-buttons{
+    display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;margin-left:38px;
+    animation:fadeIn .3s ease-out
+  }
+  .choice-btn{
+    padding:9px 15px;background:rgba(255,77,46,.12);
+    border:1.5px solid var(--primary);border-radius:22px;
+    color:var(--primary);font-size:13.5px;font-weight:600;
+    cursor:pointer;transition:.15s;font-family:inherit;white-space:nowrap
+  }
+  .choice-btn:active{background:var(--primary);color:#fff;transform:scale(.96)}
+  .choice-btn.disabled{opacity:.35;cursor:not-allowed;pointer-events:none;border-style:dashed}
+
+  .quick-replies{padding:8px 12px;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;flex-shrink:0;background:var(--bg)}
+  .quick-replies::-webkit-scrollbar{display:none}
+  .chip{
+    background:transparent;border:1.5px solid var(--primary);color:var(--primary);
+    padding:8px 14px;border-radius:22px;font-size:13.5px;font-weight:600;
+    white-space:nowrap;cursor:pointer;transition:.2s;flex-shrink:0;font-family:inherit
+  }
+  .chip:active{background:var(--primary);color:#fff;transform:scale(.95)}
+
+  .input-zone{padding:8px 12px calc(10px + env(safe-area-inset-bottom));background:var(--bg);flex-shrink:0;border-top:1px solid #1a1a1a}
+  .input-row{display:flex;gap:8px;align-items:center}
+  .input-field{
+    flex:1;background:#1a1a1a;border:1px solid #2a2a2a;color:#fff;
+    padding:12px 18px;border-radius:24px;font-size:15px;
+    outline:none;font-family:inherit;-webkit-appearance:none
+  }
+  .input-field:focus{border-color:var(--primary)}
+  .input-field::placeholder{color:#666}
+  .send-btn{width:44px;height:44px;border-radius:50%;background:var(--primary);border:none;color:#000;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:.2s;box-shadow:0 2px 8px rgba(255,210,0,.4)}
+  .send-btn:active{transform:scale(.9);background:var(--primary-dark)}
+  .footer{text-align:center;font-size:10.5px;color:#555;padding:6px 0 2px}
+
+  /* Carte de confirmation stylée */
+  .success-card{
+    background:linear-gradient(135deg,rgba(255,77,46,.12) 0%,rgba(255,77,46,.04) 100%);
+    border:1px solid rgba(255,77,46,.4);
+    border-radius:14px;padding:20px 14px;text-align:center;margin-top:2px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05)
+  }
+  .success-card .check-line{font-size:15px;font-weight:600;color:#fff;margin-bottom:4px;letter-spacing:.2px}
+  .success-card .order-num{
+    font-size:36px;font-weight:900;color:var(--primary);
+    letter-spacing:2px;line-height:1;margin:10px 0 4px;
+    text-shadow:0 0 20px rgba(255,77,46,.4)
+  }
+  .success-card .delay-info{font-size:13px;color:#bbb;line-height:1.55;margin-top:10px}
+  .success-card .delay-info b{color:#fff;font-weight:700}
+
+  .order-card{background:#0d0d0d;border:1px solid #2a2a2a;border-radius:12px;padding:12px;margin-top:6px;font-size:14px}
+  .order-card h4{color:var(--primary);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+  .order-line{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed #2a2a2a;gap:8px}
+  .order-line:last-child{border:none}
+  .order-line span:first-child{flex:1}
+  .order-total{display:flex;justify-content:space-between;font-weight:700;margin-top:8px;padding-top:10px;border-top:2px solid var(--primary);color:var(--primary);font-size:16px}
+
+  b{color:var(--primary);font-weight:600}
+  .msg.user .bubble b{color:#000;text-decoration:underline}
+
+  /* Modal Reçu */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:100;padding:16px;animation:fadeIn .2s ease-out}
+  .modal-overlay.show{display:flex}
+  .receipt{background:#fffaf0;color:#1a1a1a;border-radius:14px;max-width:340px;width:100%;max-height:92vh;overflow-y:auto;font-family:'Courier New',monospace;box-shadow:0 20px 60px rgba(0,0,0,.6);animation:slideUp .3s ease-out}
+  @keyframes slideUp{from{opacity:0;transform:translateY(30px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+  .receipt-logo-wrap{text-align:center;padding:18px 16px 10px}
+  .receipt-logo-circle{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:56px;height:56px;border-radius:50%;background:#000;
+    font-size:32px;font-weight:900;color:var(--primary);
+    margin-bottom:8px;box-shadow:0 3px 10px rgba(0,0,0,.25)
+  }
+  .receipt-brand{font-size:18px;font-weight:900;color:#000;letter-spacing:1.5px;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+  .receipt-divider-strong{border-top:2px dashed #999;margin:0 16px}
+  .receipt-num-big{
+    text-align:center;padding:14px 16px 10px;
+    font-size:32px;font-weight:900;color:var(--primary);letter-spacing:2px;
+    font-family:'Courier New',monospace
+  }
+  .receipt-date{
+    text-align:center;font-size:11.5px;color:#666;line-height:1.5;
+    padding:0 16px 12px;font-family:-apple-system,BlinkMacSystemFont,sans-serif
+  }
+  .receipt-body{padding:14px 18px}
+  .receipt-line{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;line-height:1.4;gap:8px}
+  .receipt-line span:first-child{flex:1}
+  .receipt-divider{border-top:2px dashed #999;margin:10px 0}
+  .receipt-total{display:flex;justify-content:space-between;font-size:17px;font-weight:900;color:var(--primary)}
+  .receipt-info{font-size:12.5px;color:#444;margin-top:10px;line-height:1.7;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+  .receipt-info b{color:#1a1a1a}
+  .receipt-status{
+    text-align:center;padding:12px 16px;background:#dcfce7;color:#166534;
+    font-weight:700;font-size:13px;border-top:2px dashed #999;font-family:-apple-system,BlinkMacSystemFont,sans-serif
+  }
+  .receipt-halal{
+    text-align:center;padding:8px 16px;font-size:11.5px;color:#15803d;
+    font-weight:700;background:#f0fdf4;border-top:1px dashed #ccc;
+    font-family:-apple-system,BlinkMacSystemFont,sans-serif;letter-spacing:.3px
+  }
+  .receipt-qr-wrap{text-align:center;padding:14px 16px 6px;background:#fff}
+  .receipt-qr{
+    display:inline-block;background:#fff;padding:6px;border-radius:6px;
+    box-shadow:0 1px 3px rgba(0,0,0,.1)
+  }
+  .receipt-qr svg{display:block;width:80px;height:80px}
+  .receipt-qr-label{font-size:10px;color:#888;margin-top:4px;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+  .receipt-footer{text-align:center;font-size:10px;color:#999;padding:8px 16px 14px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;border-top:1px solid #eee}
+  .receipt-actions{display:flex;gap:8px;padding:12px 16px 16px;background:#fff;border-top:1px solid #eee}
+  .receipt-btn{flex:1;padding:12px;border-radius:10px;border:none;font-weight:700;font-size:13.5px;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,sans-serif;transition:.2s;display:flex;align-items:center;justify-content:center;gap:5px}
+  .receipt-btn.close{background:#e5e7eb;color:#1a1a1a}
+  .receipt-btn.share{background:#3b82f6;color:#fff}
+  .receipt-btn.new{background:var(--primary);color:#fff}
+  .receipt-btn:active{transform:scale(.96)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="avatar">7</div>
+  <div class="header-info">
+    <div class="name">Seven Times</div>
+    <div class="status"><span class="dot"></span>Assistant IA · Halal certifié</div>
+  </div>
+  <div class="header-icons">
+    <button class="icon-btn" onclick="resetChat()" aria-label="Recommencer">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+    </button>
+    <button class="icon-btn" aria-label="Paramètres">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="banners" id="banners"></div>
+
+<div class="chat" id="chat"></div>
+
+<div class="quick-replies">
+  <button class="chip" onclick="quickSend('Commander')">🛒 Commander</button>
+  <button class="chip" onclick="quickSend('Le menu')">📋 Le menu</button>
+  <button class="chip" onclick="quickSend('Halal ?')">✅ Halal ?</button>
+  <button class="chip" onclick="quickSend('Horaires')">🕒 Horaires</button>
+</div>
+
+<div class="input-zone">
+  <div class="input-row">
+    <input id="userInput" class="input-field" placeholder="Posez votre question..." autocomplete="off" autocapitalize="sentences">
+    <button class="send-btn" onclick="handleSend()" aria-label="Envoyer">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+    </button>
+  </div>
+  <div class="footer">Propulsé par IAbot</div>
+</div>
+
+<div class="modal-overlay" id="receiptModal" onclick="if(event.target===this) closeReceipt()">
+  <div class="receipt" id="receiptContent"></div>
+</div>
+
+<script>
+/* ============ MENU OFFICIEL SEVEN TIMES — Vaulx-en-Velin (Uber Eats) ============ */
+const ITEMS = [
+  // THE MENU DUOS
+  { id:'duo-1', name:'Le Duo 1 (Big + Géant)', price:15.90, desc:"Servi avec frites et boisson au choix", cat:'menu-duo', kw:['duo 1','big geant'] },
+  { id:'duo-2', name:'Le Duo 2 (Big + Double Cheese)', price:15.90, desc:"Servi avec frites et boisson au choix", cat:'menu-duo', kw:['duo 2','big double cheese'] },
+  { id:'duo-3', name:'Le Duo 3 (Big + Deluxe)', price:15.90, desc:"Servi avec frites et boisson au choix", cat:'menu-duo', kw:['duo 3','big deluxe'] },
+  { id:'duo-4', name:'Le Duo 4 (Géant + Deluxe)', price:15.90, desc:"Servi avec frites et boisson au choix", cat:'menu-duo', kw:['duo 4','geant deluxe'] },
+  { id:'duo-5', name:'Le Duo 5 (Big + Chicken)', price:15.90, desc:"Servi avec frites et boisson au choix", cat:'menu-duo', kw:['duo 5','big chicken'] },
+  { id:'duo-6', name:'Le Duo 6 (Géant + Chicken)', price:15.90, desc:"Servi avec frites et boisson au choix", cat:'menu-duo', kw:['duo 6','geant chicken'] },
+  { id:'duo-7', name:'Le Duo 7 (Big + Cheese)', price:14.90, desc:"Servi avec frites et boisson au choix", cat:'menu-duo', kw:['duo 7','big cheese'] },
+  { id:'duo-8', name:'Le Duo 8 (Géant + Cheese)', price:14.90, desc:"Servi avec frites et boisson au choix", cat:'menu-duo', kw:['duo 8','geant cheese'] },
+  { id:'duo-9', name:'Le Duo 9 (Chèvre + Kiri)', price:15.90, desc:"Servi avec frites et boisson au choix", cat:'menu-duo', kw:['duo 9','chevre kiri'] },
+  // THE MENU FAMILY
+  { id:'menu-family', name:'Le Menu Family', price:31.90, desc:"2 Big Burgers, 2 Géant Burgers, 6 Nuggets, 2 frites et 1 bouteille de Coca-Cola", cat:'menu-family', kw:['family','famille','pour la famille','plusieurs personnes'] },
+  // THE SANDWICHES
+  { id:'curry', name:'Le Curry', price:12.30, desc:"Pain au choix. Émincé de poulet curry, cheddar, sauces et crudités au choix", cat:'sandwich', kw:['curry'] },
+  { id:'tandoori', name:'Le Tandoori', price:12.30, desc:"Pain au choix. Émincé de poulet tandoori, cheddar, sauces et crudités au choix", cat:'sandwich', kw:['tandoori'] },
+  { id:'duo-mix', name:'Le Duo Mix', price:12.30, desc:"Pain au choix. Émincé de poulet curry, steak, cheddar, sauces et crudités au choix", cat:'sandwich', kw:['duo mix'] },
+  { id:'parigo', name:'Le Parigo', price:12.30, desc:"Pain au choix. Émincé d'escalope au boursin kiri emmental, cheddar, sauces et crudités au choix", cat:'sandwich', kw:['parigo'] },
+  { id:'americain', name:"L'Américain", price:8.00, desc:"Pain au choix. 2 steaks, cheddar, sauces et crudités au choix", cat:'sandwich', kw:['americain','américain'] },
+  { id:'wrap-tenders', name:'Le Wrap Tenders', price:9.00, desc:"Poulet tenders, sauce mayo poivre, cheddar et crudités", cat:'sandwich', kw:['wrap tenders','wrap'] },
+  { id:'wrap-steak', name:'Le Wrap Steak', price:9.00, desc:"Steak, sauce mayo poivre, cheddar et crudités", cat:'sandwich', kw:['wrap steak'] },
+  // THE BURGERS
+  { id:'cheeseburger', name:'Le Cheeseburger', price:5.50, desc:"Moutarde, ketchup, oignons, cornichon, cheddar et steak", cat:'burger', kw:['cheeseburger','cheese'] },
+  { id:'double-cheese', name:'Le Double Cheeseburger', price:8.75, desc:"Moutarde, ketchup, oignons, cornichons, 2 cheddar et 2 steak", cat:'burger', kw:['double cheese','double cheeseburger'] },
+  { id:'geant', name:'Le Géant Burger', price:8.75, desc:"Sauce géant, salade, oignons, 2 cheddar et 2 steak", cat:'burger', kw:['geant','géant'] },
+  { id:'big', name:'Le Big Burger', price:8.90, desc:"Sauce big, salade, oignons, cornichons, 2 cheddar et 2 steak", cat:'burger', kw:['big','big burger'] },
+  { id:'kiri', name:'Le Kiri Burger', price:9.00, desc:"Mayonnaise, salade, kiri, 2 cheddar et 2 steak", cat:'burger', kw:['kiri'] },
+  { id:'chevre', name:'Le Chèvre Burger', price:9.00, desc:"Mayonnaise, salade, chèvre, 2 cheddar et 2 steak", cat:'burger', kw:['chevre','chèvre'] },
+  { id:'chicken', name:'Le Chicken Burger', price:9.00, desc:"Mayonnaise, salade, cheddar et poulet", cat:'burger', kw:['chicken burger','poulet burger'] },
+  { id:'fish', name:'Le Fish Burger', price:9.00, desc:"Sauce fish, cheddar et poisson pané", cat:'burger', kw:['fish','poisson'] },
+  { id:'supreme', name:'Le Suprême Cheeseburger', price:9.00, desc:"Sauce suprême, oignons crispy, cheddar et steak", cat:'burger', kw:['supreme','suprême'] },
+  { id:'deluxe', name:'Le Deluxe Burger', price:9.00, desc:"Sauce deluxe, salade, tomate, cheddar et steak", cat:'burger', kw:['deluxe'] },
+  { id:'bacon', name:'Le Bacon Burger', price:9.00, desc:"Sauce bacon, cheddar, tranches de bacon (de bœuf halal) et steak", cat:'burger', kw:['bacon'] },
+  // THE WHOOP
+  { id:'whoop', name:'Le Whoop', price:10.90, desc:"Steak cuit sur flamme, ketchup, mayo, salade, tomate, oignons, cornichons, cheddar", cat:'whoop', kw:['whoop'] },
+  { id:'whoop-double', name:'Le Whoop Double', price:12.50, desc:"2 steaks cuits sur flamme, ketchup, mayo, salade, tomate, oignons, cornichons, cheddar", cat:'whoop', kw:['whoop double'] },
+  { id:'whoop-triple', name:'Le Whoop Triple', price:13.90, desc:"3 steaks cuits sur flamme, ketchup, mayo, salade, tomate, oignons, cornichons, cheddar", cat:'whoop', kw:['whoop triple'] },
+  // THE TACOS
+  { id:'tacos', name:'Compose Ton Tacos', price:8.90, desc:"Tortilla garnie à composer : viande au choix, frites et sauce au choix", cat:'tacos', kw:['tacos'] },
+  // THE NAANS (Cheese Naan)
+  { id:'naan-curry', name:'Naan Le Curry', price:12.70, desc:"Pain Cheese Naan, émincé de poulet curry, cheddar, sauces et crudités au choix", cat:'naan', kw:['naan curry'] },
+  { id:'naan-tandoori', name:'Naan Le Tandoori', price:12.70, desc:"Pain Cheese Naan, émincé de poulet tandoori, cheddar, sauces et crudités au choix", cat:'naan', kw:['naan tandoori'] },
+  { id:'naan-tenders', name:'Naan Le Tenders', price:12.70, desc:"Pain Cheese Naan, tenders, cheddar, sauces et crudités au choix", cat:'naan', kw:['naan tenders'] },
+  { id:'naan-gruyere', name:"Naan L'Escalope Gruyère", price:12.70, desc:"Pain Cheese Naan, émincé d'escalope gruyère, cheddar, sauces et crudités au choix", cat:'naan', kw:['naan gruyere','escalope gruyere'] },
+  { id:'naan-boursin', name:"Naan L'Escalope Boursin", price:12.70, desc:"Pain Cheese Naan, émincé d'escalope boursin, cheddar, sauces et crudités au choix", cat:'naan', kw:['naan boursin','escalope boursin'] },
+  { id:'naan-double-steak', name:'Naan Le Double Steak', price:10.70, desc:"Pain Cheese Naan, steak, cheddar, sauce et crudités au choix", cat:'naan', kw:['naan double steak','naan steak'] },
+  // THE BRASSERIE
+  { id:'escalope-forestiere', name:"L'Escalope Forestière", price:20.70, desc:"Plat avec accompagnement et boisson", cat:'brasserie', kw:['escalope forestiere','forestiere'] },
+  { id:'escalope-poivree', name:"L'Escalope Poivrée", price:20.70, desc:"Plat avec accompagnement et boisson", cat:'brasserie', kw:['escalope poivree','poivree'] },
+  { id:'poulet-thai', name:'Le Poulet Thaï', price:21.90, desc:"Plat avec accompagnement et boisson", cat:'brasserie', kw:['poulet thai','thai'] },
+  { id:'brochettes', name:'Les Brochettes de Poulet', price:20.70, desc:"Plat avec accompagnement et boisson", cat:'brasserie', kw:['brochettes'] },
+  { id:'mexican-beef', name:'La Mexican Beef', price:25.90, desc:"Plat avec accompagnement et boisson", cat:'brasserie', kw:['mexican','mexican beef'] },
+  { id:'camembert-roti', name:'Le Camembert Rôti', price:25.90, desc:"Plat avec accompagnement et boisson", cat:'brasserie', kw:['camembert roti','camembert rôti'] },
+  { id:'camembert-seul', name:'Camembert Rôti Seul', price:10.90, desc:"Camembert entier rôti, cœur fondant. Servi seul", cat:'brasserie', kw:['camembert seul'] },
+  { id:'cheese-naan-seul', name:'Cheese Naan Seul', price:5.00, desc:"Pain naan au fromage, servi seul", cat:'brasserie', kw:['cheese naan seul','naan seul'] },
+  // THE PASTAS
+  { id:'alfredo', name:'Les Alfredo', price:16.70, desc:"Pâtes Alfredo avec boisson", cat:'pasta', kw:['alfredo','pates'] },
+  { id:'scampia', name:'Les Scampia', price:18.00, desc:"Pâtes Scampia avec boisson", cat:'pasta', kw:['scampia'] },
+  // THE SALADES
+  { id:'salade-cesar', name:'La Salade César', price:15.50, desc:"Salade, poulet, croûtons, tomates cerises, parmesan, sauce César et balsamique. Avec boisson", cat:'salade', kw:['salade cesar','cesar','césar'] },
+  { id:'salade-burrata', name:'La Salade Burrata', price:15.50, desc:"Pousses de roquette, tomates cerises, sauce balsamique et burrata. Avec boisson", cat:'salade', kw:['salade burrata','burrata'] },
+  { id:'salade-chevre', name:'La Salade Chèvre', price:15.90, desc:"Salade, tomates cerises, toasts de chèvre chaud, sauce balsamique", cat:'salade', kw:['salade chevre','salade chèvre'] },
+  // THE MENU KIDS
+  { id:'menu-kids', name:'Le Menu Kids', price:8.00, desc:"Croc ou Hamburger ou 4 nuggets, avec frites, compote, Capri Sun et Kinder Surprise", cat:'menu-kids', kw:['kids','enfant','pour mon enfant','menu enfant'] },
+  // THE PETITE FAIM
+  { id:'mozza-sticks', name:'Les Mozza Sticks x6', price:8.00, desc:"6 pièces de mozza sticks", cat:'petite-faim', kw:['mozza','mozzarella sticks'] },
+  { id:'nuggets', name:'Les Nuggets x6', price:8.00, desc:"6 pièces de nuggets de poulet", cat:'petite-faim', kw:['nuggets'] },
+  { id:'tenders', name:'Les Tenders x3', price:8.00, desc:"3 pièces de tenders de poulet", cat:'petite-faim', kw:['tenders'] },
+  { id:'jalapenos', name:'Les Jalapenos x6', price:8.00, desc:"6 pièces de jalapenos", cat:'petite-faim', kw:['jalapenos','jalapeno'] },
+  { id:'bouchees-camembert', name:'Les Bouchées de Camembert x6', price:8.00, desc:"6 pièces de bouchées de camembert", cat:'petite-faim', kw:['bouchees camembert'] },
+  { id:'croc', name:'Le Croc', price:4.50, desc:"Cheddar et jambon (de dinde halal)", cat:'petite-faim', kw:['croc','croque'] },
+  // THE DESSERTS
+  { id:'sundae', name:'Sundae', price:4.90, desc:"Glace vanille, sauce chocolat", cat:'dessert', kw:['sundae'] },
+  { id:'milkshake', name:'Milkshake', price:5.90, desc:"Chantilly, pépites de chocolat et coulis de chocolat", cat:'dessert', kw:['milkshake'] },
+  { id:'croffle', name:'Croffle', price:5.90, desc:"Viennoiserie façon gaufre, crème légère, nappage chocolat, éclats croquants", cat:'dessert', kw:['croffle'] },
+  { id:'tiramisu', name:'Tiramisu', price:5.90, desc:"Biscuits imbibés de café, crème mascarpone et cacao", cat:'dessert', kw:['tiramisu'] },
+  { id:'tartes', name:'Tartes', price:4.90, desc:"Tarte enrobée de chocolat au lait, couches biscuitées, éclats de caramel Daim", cat:'dessert', kw:['tarte','tartes'] },
+  { id:'creamy-croffle', name:'Creamy Croffle', price:6.90, desc:"Croffle crémeux glacé", cat:'dessert', kw:['creamy croffle'] },
+  // TEA & CITRONNADE
+  { id:'tea-hibiscus', name:'Tea Hibiscus', price:5.90, desc:"Thé glacé à l'hibiscus, servi avec glaçons", cat:'tea', kw:['tea hibiscus','hibiscus'] },
+  { id:'tea-pasteque', name:'Tea Pastèque', price:5.90, desc:"Thé glacé à la pastèque, servi avec glaçons", cat:'tea', kw:['tea pasteque','pasteque','pastèque'] },
+  { id:'tea-peche-mangue', name:'Tea Pêche Mangue', price:5.90, desc:"Thé glacé pêche-mangue", cat:'tea', kw:['tea peche mangue','peche mangue','pêche mangue'] },
+  { id:'citro-mojito-fraise', name:'Citronnade Mojito Fraise', price:5.90, desc:"Citronnade façon mojito, fraise, menthe et glaçons", cat:'tea', kw:['mojito fraise'] },
+  { id:'citro-mojito', name:'Citronnade Mojito', price:5.90, desc:"Citronnade façon mojito, menthe et glaçons", cat:'tea', kw:['mojito','citronnade mojito','citronnade'] },
+  { id:'citro-curacao', name:'Citronnade Curaçao Gingembre', price:5.90, desc:"Citronnade au curaçao bleu et gingembre, servie avec glaçons", cat:'tea', kw:['curacao','curaço','gingembre'] },
+  // THE BOISSONS
+  { id:'coca', name:'Coca-Cola 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['coca','coca cola','cola'] },
+  { id:'coca-cherry', name:'Coca-Cola Cherry 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['coca cherry','cherry'] },
+  { id:'coca-zero', name:'Coca-Cola Zero 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['coca zero','zero'] },
+  { id:'ice-tea', name:'Ice Tea 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['ice tea','icetea'] },
+  { id:'oasis-tropical', name:'Oasis Tropical 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['oasis tropical','oasis'] },
+  { id:'oasis-fraise', name:'Oasis Fraise Framboise 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['oasis fraise','fraise framboise'] },
+  { id:'oasis-pomme', name:'Oasis Pomme Poire 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['oasis pomme','pomme poire'] },
+  { id:'schweppes', name:'Schweppes Agrumes 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['schweppes','agrumes'] },
+  { id:'hawai', name:'Hawaï 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['hawai','hawaï'] },
+  { id:'fanta', name:'Fanta Orange 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['fanta','fanta orange','orange'] },
+  { id:'sprite', name:'Sprite 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['sprite'] },
+  { id:'perrier', name:'Perrier 33cl', price:2.80, desc:"Eau gazeuse 33cl", cat:'boisson', kw:['perrier','gazeuse'] },
+  { id:'coca-verre', name:'Coca-Cola en verre', price:3.50, desc:"Bouteille verre", cat:'boisson', kw:['coca verre','bouteille coca'] },
+  { id:'orangina-verre', name:'Orangina en verre', price:3.50, desc:"Bouteille verre", cat:'boisson', kw:['orangina'] },
+  { id:'coca-1-5l', name:'Coca-Cola 1,5L', price:4.50, desc:"Bouteille 1,5L", cat:'boisson', kw:['coca 1.5','coca 1,5','grande coca'] },
+  { id:'oasis-2l', name:'Oasis Tropical 2L', price:4.90, desc:"Bouteille 2L", cat:'boisson', kw:['oasis 2l'] },
+  { id:'palestine-cola', name:'Palestine Cola 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['palestine','palestine cola'] }
+];
+
+/* ============ BOISSONS NON DISPONIBLES (alternatives à proposer) ============ */
+// Seven Times vend Coca, Coca Zero, Coca Cherry, Sprite, Fanta, Oasis (3), Schweppes,
+// Hawaï, Ice Tea, Perrier, Orangina, Palestine Cola, Tea & Citronnades signature.
+// Reste indispo : Pepsi, Red Bull/Monster, alcool.
+const UNAVAILABLE_DRINKS = ['pepsi','red bull','redbull','monster','heineken','kronenbourg'];
+
+/* ============ ÉTAT ============ */
+let chatState = {
+  step:'idle',
+  order:{ items:[], pendingItem:null, mode:null, name:null }
+};
+const orderHistory = {};
+
+const chatEl = document.getElementById('chat');
+const inputEl = document.getElementById('userInput');
+const bannersEl = document.getElementById('banners');
+
+function timeNow(){ const d=new Date(); return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'); }
+
+/* ============ AFFICHAGE MESSAGES ============ */
+function appendMessage(text, sender, isHTML=false, choices=null){
+  const wrap = document.createElement('div');
+  wrap.className = 'msg '+sender;
+  const mini = sender === 'bot' ? '<div class="mini-avatar">7</div>' : '';
+  wrap.innerHTML = mini+'<div class="bubble-wrap"><div class="bubble"></div><div class="timestamp">'+timeNow()+'</div></div>';
+  chatEl.appendChild(wrap);
+  const bubble = wrap.querySelector('.bubble');
+  if(isHTML) bubble.innerHTML = text; else bubble.textContent = text;
+
+  // Désactiver les anciens choice-buttons
+  document.querySelectorAll('.choice-buttons:not(.disabled-group) .choice-btn').forEach(b => b.classList.add('disabled'));
+  document.querySelectorAll('.choice-buttons').forEach(g => g.classList.add('disabled-group'));
+
+  // Ajouter de nouveaux choice-buttons si fournis
+  if(choices && sender === 'bot' && choices.length){
+    const div = document.createElement('div');
+    div.className = 'choice-buttons';
+    choices.forEach(c => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.textContent = c.label;
+      btn.onclick = () => {
+        const value = c.value || c.label;
+        // Désactiver tout le groupe
+        div.querySelectorAll('.choice-btn').forEach(b => b.classList.add('disabled'));
+        div.classList.add('disabled-group');
+        appendMessage(value, 'user');
+        setTimeout(()=> processMessage(value), 200);
+      };
+      div.appendChild(btn);
+    });
+    chatEl.appendChild(div);
+  }
+  scrollDown();
+}
+
+function showTyping(){
+  const wrap = document.createElement('div');
+  wrap.className = 'msg bot'; wrap.id = 'typing-indicator';
+  wrap.innerHTML = '<div class="mini-avatar">7</div><div class="bubble-wrap"><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div></div>';
+  chatEl.appendChild(wrap); scrollDown();
+}
+function hideTyping(){ const t=document.getElementById('typing-indicator'); if(t) t.remove(); }
+function scrollDown(){ requestAnimationFrame(()=>{ chatEl.scrollTop = chatEl.scrollHeight; }); }
+
+function botReply(text, isHTML=false, delay=900, choices=null){
+  showTyping();
+  setTimeout(()=>{ hideTyping(); appendMessage(text, 'bot', isHTML, choices); }, delay);
+}
+
+/* ============ NLP ============ */
+function normalize(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim()+' '; }
+function any(txt, arr){ return arr.some(k => txt.includes(k)); }
+function findItem(rawTxt, categories=null){
+  const n = normalize(rawTxt);
+  let best = null, bestLen = 0;
+  for(const it of ITEMS){
+    if(categories && !categories.includes(it.cat)) continue;
+    for(const k of it.kw){
+      const nk = normalize(k).trim();
+      if(n.includes(nk) && nk.length > bestLen){ best = it; bestLen = nk.length; }
+    }
+  }
+  return best;
+}
+function get(id){ return ITEMS.find(i=>i.id===id); }
+
+/* ============ MENU AFFICHAGE ============ */
+function buildMenuHTML(){
+  const cat = (label, items) => {
+    let h = "<br><b>"+label+"</b><br>";
+    items.forEach(b=>{ h += "• "+b.name+" — <b>"+b.price.toFixed(2)+"€</b><br>"; });
+    return h;
+  };
+  let h = "<b>📋 NOTRE CARTE</b><br>";
+  h += cat("🎁 LES DUOS", ITEMS.filter(i=>i.cat==='menu-duo'));
+  h += cat("👨‍👩‍👦 MENU FAMILY", ITEMS.filter(i=>i.cat==='menu-family'));
+  h += cat("🥖 SANDWICHES", ITEMS.filter(i=>i.cat==='sandwich'));
+  h += cat("🍔 BURGERS", ITEMS.filter(i=>i.cat==='burger'));
+  h += cat("🔥 LE WHOOP", ITEMS.filter(i=>i.cat==='whoop'));
+  h += cat("🌯 LE TACOS", ITEMS.filter(i=>i.cat==='tacos'));
+  h += cat("🧀 CHEESE NAANS", ITEMS.filter(i=>i.cat==='naan'));
+  h += cat("🍷 BRASSERIE", ITEMS.filter(i=>i.cat==='brasserie'));
+  h += cat("🍝 PASTAS", ITEMS.filter(i=>i.cat==='pasta'));
+  h += cat("🥗 SALADES", ITEMS.filter(i=>i.cat==='salade'));
+  h += cat("👶 MENU KIDS", ITEMS.filter(i=>i.cat==='menu-kids'));
+  h += cat("🍗 PETITE FAIM", ITEMS.filter(i=>i.cat==='petite-faim'));
+  h += cat("🧁 DESSERTS", ITEMS.filter(i=>i.cat==='dessert'));
+  h += cat("🍵 TEA & CITRONNADE", ITEMS.filter(i=>i.cat==='tea'));
+  h += cat("🥤 BOISSONS", ITEMS.filter(i=>i.cat==='boisson'));
+  h += "<br>💡 <i>Tapez un nom de plat ou \"commander\" pour démarrer.</i>";
+  return h;
+}
+
+/* ============ PARSING COMPLET (UNE PHRASE = COMMANDE) ============ */
+function parseFullOrder(rawMsg){
+  const n = normalize(rawMsg);
+  const found = { burger:null, drink:null, side:null, quantity:1, hasMenu:false, hasSeul:false, hasPotatoes:false };
+
+  // Quantité
+  const numWords = { 'deux':2, 'trois':3, 'quatre':4, 'cinq':5 };
+  for(const w in numWords){ if(n.includes(' '+w+' ') || n.startsWith(w+' ')){ found.quantity = numWords[w]; break; } }
+  const m = n.match(/(\d+)\s*(x\s*)?(burger|big|geant|géant|cheese|chicken|fish|whoop|kiri|chevre|deluxe|supreme|bacon|tacos|naan|wrap|sandwich)/);
+  if(m) found.quantity = Math.min(parseInt(m[1]), 9);
+
+  // Burger (prend le plus long match parmi cat='burger' et 'whoop')
+  let bestLen = 0;
+  for(const it of ITEMS){
+    if(!['burger','whoop'].includes(it.cat)) continue;
+    for(const k of it.kw){
+      const nk = normalize(k).trim();
+      if(nk.length > 2 && n.includes(nk) && nk.length > bestLen){ found.burger = it; bestLen = nk.length; }
+    }
+  }
+
+  // Boisson (Seven Times en vend beaucoup)
+  if(/coca cherry|cherry/.test(n)) found.drink = get('coca-cherry');
+  else if(/coca zero|cola zero|\bzero\b/.test(n)) found.drink = get('coca-zero');
+  else if(/grande coca|coca 1[.,]5|1[.,]5l/.test(n)) found.drink = get('coca-1-5l');
+  else if(/coca verre|bouteille coca/.test(n)) found.drink = get('coca-verre');
+  else if(/palestine/.test(n)) found.drink = get('palestine-cola');
+  else if(/coca|cola/.test(n)) found.drink = get('coca');
+  else if(/sprite/.test(n)) found.drink = get('sprite');
+  else if(/oasis 2l/.test(n)) found.drink = get('oasis-2l');
+  else if(/oasis tropical|oasis trop/.test(n)) found.drink = get('oasis-tropical');
+  else if(/oasis fraise|fraise framboise/.test(n)) found.drink = get('oasis-fraise');
+  else if(/oasis pomme|pomme poire/.test(n)) found.drink = get('oasis-pomme');
+  else if(/oasis/.test(n)) found.drink = get('oasis-tropical');
+  else if(/fanta/.test(n)) found.drink = get('fanta');
+  else if(/schweppes|agrumes/.test(n)) found.drink = get('schweppes');
+  else if(/hawai|hawaï/.test(n)) found.drink = get('hawai');
+  else if(/ice ?tea|icetea|the glace|thé glacé/.test(n)) found.drink = get('ice-tea');
+  else if(/orangina/.test(n)) found.drink = get('orangina-verre');
+  else if(/perrier|gazeuse/.test(n)) found.drink = get('perrier');
+  else if(/mojito fraise/.test(n)) found.drink = get('citro-mojito-fraise');
+  else if(/mojito|citronnade mojito/.test(n)) found.drink = get('citro-mojito');
+  else if(/curacao|curaço|curaçao|gingembre/.test(n)) found.drink = get('citro-curacao');
+  else if(/citronnade/.test(n)) found.drink = get('citro-mojito');
+  else if(/hibiscus/.test(n)) found.drink = get('tea-hibiscus');
+  else if(/pasteque|pastèque/.test(n)) found.drink = get('tea-pasteque');
+  else if(/peche mangue|pêche mangue|mangue/.test(n)) found.drink = get('tea-peche-mangue');
+  // Boisson non dispo détectée → flag pour rediriger
+  if(!found.drink && /pepsi|red ?bull|monster|heineken/.test(n)){
+    found.unavailableDrink = true;
+  }
+
+  // Side / petite faim
+  if(/frite|fries/.test(n)) found.side = get('frites') || get('mozza-sticks'); // pas de "Frites" standalone chez Seven
+  else if(/tenders/.test(n)) found.side = get('tenders');
+  else if(/nuggets/.test(n)) found.side = get('nuggets');
+  else if(/mozza/.test(n)) found.side = get('mozza-sticks');
+  else if(/jalapenos|jalapeno/.test(n)) found.side = get('jalapenos');
+
+  // Mots-clés menu/seul/potatoes
+  if(/\bmenu\b|formule/.test(n)) found.hasMenu = true;
+  if(/\bseul\b|tout seul|sans menu|sans frite/.test(n)) found.hasSeul = true;
+  if(/potatoes|patate/.test(n)) found.hasPotatoes = true;
+
+  return found;
+}
+
+/* ============ BOISSONS ALTERNATIVES (qu'on n'a pas) ============ */
+const ALT_LIST = "<b>Coca</b>, <b>Sprite</b>, <b>Fanta</b>, <b>Oasis</b>, <b>Ice Tea</b>, <b>Schweppes</b>, <b>Hawaï</b>, <b>Perrier</b>, <b>Citronnade Mojito</b> ou <b>Tea signature</b>";
+function handleAlternativeDrinks(msg){
+  if(/\bpepsi\b/.test(msg)){
+    return "On n'a pas de <b>Pepsi</b>, on a du <b>Coca-Cola</b> à la place 😊 Ça vous va ?";
+  }
+  if(/\bbiere\b|\bvin\b|alcool|champagne|whisky|rhum|vodka|tequila|cocktail/.test(msg)){
+    return "Nous sommes <b>100% halal</b> donc pas d'alcool 🚫🍷<br>On a <b>Coca</b>, <b>Sprite</b>, <b>Oasis</b>, <b>Ice Tea</b>, <b>Citronnade Mojito</b> ou <b>Perrier</b> — tous sans alcool 🤝";
+  }
+  if(/\bredbull\b|red bull|monster|energie|energy drink/.test(msg)){
+    return "Pas de boisson énergisante chez nous 😊 On a "+ALT_LIST+".";
+  }
+  if((/\bjus\b|abricot|ananas/.test(msg)) && !msg.includes('avec')){
+    return "Pas de jus de fruits classique, mais on a <b>Oasis Tropical/Fraise/Pomme</b>, <b>Tea Pêche Mangue</b> ou <b>Citronnade Mojito</b> qui font le job !";
+  }
+  return null;
+}
+
+/* ============ QUESTIONS SUR LES PLATS ============ */
+function answerAboutDish(rawMsg, msg){
+  // "C'est quoi le X" / "Y a quoi dans X" / "Composition X"
+  if(/c est quoi|qu est ce que|y a quoi|qu y a|y a t il quoi|composition|ingredient|compose|qu est ce qu il y a/.test(msg)){
+    const item = findItem(rawMsg);
+    if(item){
+      return "🍔 <b>"+item.name+"</b> : "+item.desc+". <b>"+item.price.toFixed(2)+"€</b>. Tenté ?";
+    }
+  }
+  // "Différence entre X et Y"
+  if(/difference|differen|compar/.test(msg)){
+    if(/snow/.test(msg) && /addict/.test(msg)){
+      return "🆚 <b>Snow vs Addict</b> :<br>• <b>Snow</b> ❄️ → smash beef, fromage raclette, bacon de bœuf, pomme paille, plus fondant<br>• <b>Addict</b> 🔥 → smash beef + sauce Addict signature, plus classique. Les deux au bœuf, lequel vous tente ?";
+    }
+    if(/goat/.test(msg) && /addict/.test(msg)){
+      return "🆚 <b>Goat vs Addict</b> :<br>• <b>Goat</b> 🐐 → fromage de chèvre + miel + éclat de noix, plus original<br>• <b>Addict</b> 🔥 → fromage + sauce signature, plus classique";
+    }
+    if(/big/.test(msg) && /geant/.test(msg)){
+      return "🆚 <b>Bigsmash vs Géant</b> :<br>• <b>Bigsmash</b> 💪 → 11,40€, double smash + sauce big<br>• <b>Géant</b> → 8,90€, XL plus simple, meilleur rapport quantité/prix";
+    }
+  }
+  return null;
+}
+
+/* ============ INTENTIONS HUMAINES ============ */
+function handleHumanIntent(msg){
+  // Pour 2 personnes → Duo 1 (Big + Géant) 15,90€ ou Duo 7 (Big + Cheese) 14,90€
+  if(/pour deux|pour 2|a deux|a 2|en couple|partager|partage/.test(msg)){
+    const m = get('duo-1');
+    return { text:"Pour 2 personnes, je vous recommande le <b>Le Duo 1</b> 👥 (Big + Géant) — frites + boisson au choix pour <b>15,90€</b>. Sinon <b>Le Duo 7</b> (Big + Cheese) à <b>14,90€</b>. Vous prenez le Duo 1 ?", item:m, action:'suggest' };
+  }
+  // Pour la famille / plusieurs personnes
+  if(/famille|family|3 personnes|4 personnes|plusieurs|grande tablee|grosse commande/.test(msg)){
+    const m = get('menu-family');
+    return { text:"Pour la famille, on a le <b>Menu Family</b> 👨‍👩‍👦 — 2 Big Burgers + 2 Géant Burgers + 6 Nuggets + 2 frites + 1 bouteille de Coca-Cola pour <b>31,90€</b> 🤝", item:m, action:'suggest' };
+  }
+  // Pour enfant
+  if(/pour mon enfant|pour mon fils|pour ma fille|pour les enfants|pour le petit|kids|menu kid/.test(msg)){
+    const m = get('menu-kids');
+    return { text:"Pour les petits, on a le <b>Menu Kids</b> 👶 — Croc ou Hamburger ou 4 nuggets, avec frites + compote + Capri Sun + Kinder Surprise pour <b>8,00€</b>. Parfait !", item:m, action:'suggest' };
+  }
+  // Copieux / grosse faim
+  if(/copieux|consist|nourrir|cale|tres faim|grosse faim|mega faim|affame/.test(msg)){
+    return { text:"Pour une grosse faim, je vous propose :", choices:[
+      {label:'🔥 Whoop Triple 13,90€', value:'Whoop Triple'},
+      {label:'💪 Big Burger 8,90€', value:'Big Burger'},
+      {label:'🎁 Duo 1 (Big+Géant) 15,90€', value:'Duo 1'},
+      {label:'🥩 Mexican Beef 25,90€', value:'Mexican Beef'},
+      {label:'👨‍👩‍👦 Menu Family 31,90€', value:'Menu Family'}
+    ] };
+  }
+  // Végétarien / sans viande
+  if(/sans viande|vegetarien|végétarien|vege|veggie|j aime pas la viande|pas de viande|j ai pas envie de viande/.test(msg)){
+    return { text:"Pas de souci ! Sans viande on a :<br>• <b>Fish Burger</b> 🐟 — 9€<br>• <b>Salade Burrata</b> 🥗 — 15,50€<br>• <b>Salade Chèvre</b> 🥗 — 15,90€<br>• <b>Alfredo</b> 🍝 — 16,70€<br>• <b>Naan Gruyère / Boursin</b> 🧀 — 12,70€", choices:[
+      {label:'🐟 Fish Burger 9€', value:'Fish Burger'},
+      {label:'🥗 Salade Burrata 15,50€', value:'Salade Burrata'},
+      {label:'🥗 Salade Chèvre 15,90€', value:'Salade Chèvre'},
+      {label:'🍝 Alfredo 16,70€', value:'Alfredo'},
+      {label:'🧀 Naan Gruyère 12,70€', value:'Naan Gruyère'},
+      {label:'🧀 Naan Boursin 12,70€', value:'Naan Boursin'}
+    ] };
+  }
+  // Rapide
+  if(/rapide|vite|presse|j ai pas le temps/.test(msg)){
+    return { text:"Le plus rapide à préparer, c'est le <b>Cheeseburger</b> 🍔 — <b>5,50€</b>. Ou un <b>Croc</b> à <b>4,50€</b> 🤝", item:get('cheeseburger'), action:'suggest' };
+  }
+  return null;
+}
+
+/* ============ INTELLIGENCE FAST-FOOD ============ */
+function getSmartSuggestion(rawMsg, msg){
+  // SURPRISE / CHOIX AUTO
+  if(any(msg, ['surprise','choisis pour moi','choisis moi','etonne moi','propose moi','recommande'])){
+    return { item:get('whoop'), text:"Le <b>Whoop</b> 🔥 — notre signature ! Steak cuit sur flamme, ketchup, mayo, salade, tomate, oignons, cornichons, cheddar. <b>10,90€</b>. Tenté ?", action:'suggest' };
+  }
+  if(any(msg, ['moins cher','pas cher','economique','premier prix','petit budget'])){
+    return { item:get('croc'), text:"Le <b>Croc</b> à <b>4,50€</b> ! Cheddar et jambon de dinde halal. Notre prix le plus bas 🤝", action:'suggest' };
+  }
+  if(any(msg, ['le meilleur','le top','le mieux','votre best','best seller','populaire'])){
+    return { item:get('big'), text:"Notre <b>Big Burger</b> 💪 — best-seller des clients : sauce big, salade, oignons, cornichons, 2 cheddar et 2 steak. <b>8,90€</b>", action:'suggest' };
+  }
+  // GOÛTS / PRÉFÉRENCES
+  if(any(msg, ['epice','spicy','piquant',' fort ','releve','pimente','feu '])){
+    return { item:get('jalapenos'), text:"Pour du piquant 🌶️, nos <b>Jalapenos x6</b> à <b>8,00€</b> sont parfaits ! Ou un <b>Tacos</b> avec sauce épicée 🤝", action:'suggest' };
+  }
+  if(any(msg, [' doux ','simple ','basique','sans chichi','traditionnel','normal '])){
+    return { item:get('cheeseburger'), text:"Le <b>Cheeseburger</b> classique : moutarde, ketchup, oignons, cornichon, cheddar et steak. <b>5,50€</b> seulement 🤝", action:'suggest' };
+  }
+  if(any(msg, [' gros ','grand','xl','xxl','genereux','beaucoup ','grosse faim','tres faim','affame','double','triple','extra viande'])){
+    return { item:get('whoop-triple'), text:"Le <b>Whoop Triple</b> 🔥 — 3 steaks cuits sur flamme. <b>13,90€</b>. Pour les vraies grosses faims !", action:'suggest' };
+  }
+  if(any(msg, ['special','unique','qui change','different','original ','originalite','sortir des sentiers'])){
+    return { item:get('chevre'), text:"Le <b>Chèvre Burger</b> 🐐 — mayonnaise, salade, chèvre, 2 cheddar et 2 steak. Ça change ! <b>9,00€</b>", action:'suggest' };
+  }
+  if(any(msg, ['frais ','leger','pas trop lourd','pas trop gras'])){
+    return { item:get('salade-burrata'), text:"La <b>Salade Burrata</b> 🥗 — pousses de roquette, tomates cerises, balsamique et burrata. <b>15,50€</b>, avec boisson", action:'suggest' };
+  }
+  // CATÉGORIES / TYPES
+  if(any(msg, ['steak','boeuf','beef','viande','de la viande','un peu de viande'])){
+    return { text:"On a plein de burgers au bœuf 🥩 :<br>• <b>Cheeseburger</b> — 5,50€<br>• <b>Big</b> 💪 — 8,90€<br>• <b>Géant</b> — 8,75€<br>• <b>Double Cheeseburger</b> — 8,75€<br>• <b>Whoop</b> 🔥 — 10,90€ (steak sur flamme)<br>• <b>Whoop Double/Triple</b> — 12,50€/13,90€", choices:[
+      {label:'💪 Big 8,90€', value:'Big Burger'},
+      {label:'🔥 Whoop 10,90€', value:'Whoop'},
+      {label:'🍔 Géant 8,75€', value:'Géant Burger'},
+      {label:'🧀 Double Cheese 8,75€', value:'Double Cheeseburger'},
+      {label:'🔥🔥 Whoop Triple', value:'Whoop Triple'}
+    ] };
+  }
+  if(any(msg, ['poulet','chicken','pane','filet','volaille','tenders'])){
+    return { text:"On a plein d'options au poulet 🍗 :<br>• <b>Chicken Burger</b> — 9€<br>• <b>Naan Tandoori/Curry/Tenders</b> — 12,70€<br>• <b>Wrap Tenders</b> — 9€<br>• <b>Salade César</b> (poulet) — 15,50€<br>• <b>Brochettes de Poulet</b> — 20,70€", choices:[
+      {label:'🍗 Chicken Burger', value:'Chicken Burger'},
+      {label:'🌯 Wrap Tenders', value:'Wrap Tenders'},
+      {label:'🧀 Naan Tandoori', value:'Naan Tandoori'},
+      {label:'🥗 Salade César', value:'Salade César'}
+    ] };
+  }
+  if(any(msg, ['fromage','cheese','cheddar','mozza','kiri','chevre','chèvre','boursin','gruyere','gruyère','burrata','camembert'])){
+    return { text:"Nos plus fromagés 🧀 :<br>• <b>Kiri Burger</b> — 9€<br>• <b>Chèvre Burger</b> — 9€<br>• <b>Mozza Sticks x6</b> — 8€<br>• <b>Camembert Rôti</b> — 25,90€ (avec boisson)<br>• <b>Naan Boursin/Gruyère</b> — 12,70€<br>• <b>Salade Burrata</b> — 15,50€", choices:[
+      {label:'🧀 Kiri Burger', value:'Kiri Burger'},
+      {label:'🐐 Chèvre Burger', value:'Chèvre Burger'},
+      {label:'🥖 Naan Boursin', value:'Naan Boursin'},
+      {label:'🍅 Salade Burrata', value:'Salade Burrata'}
+    ] };
+  }
+  // NAANS
+  if(any(msg, ['naan','cheese naan','indien'])){
+    return { text:"🧀 Nos <b>Cheese Naans</b> :<br>• Curry / Tandoori / Tenders / Escalope Gruyère / Boursin — <b>12,70€</b><br>• Double Steak — <b>10,70€</b><br>• Cheese Naan seul — <b>5,00€</b>", choices:[
+      {label:'Curry 12,70€', value:'Naan Curry'},
+      {label:'Tandoori 12,70€', value:'Naan Tandoori'},
+      {label:'Tenders 12,70€', value:'Naan Tenders'},
+      {label:'Boursin 12,70€', value:'Naan Boursin'},
+      {label:'Double Steak 10,70€', value:'Naan Double Steak'}
+    ] };
+  }
+  // DUOS
+  if(any(msg, [' duo ','les duos','formule duo','combo'])){
+    return { text:"🎁 Nos <b>9 Duos</b> (frites + boisson inclus) :<br>• Duo 1 Big+Géant — 15,90€<br>• Duo 2 Big+Double Cheese — 15,90€<br>• Duo 3 Big+Deluxe — 15,90€<br>• Duo 4 Géant+Deluxe — 15,90€<br>• Duo 5 Big+Chicken — 15,90€<br>• Duo 6 Géant+Chicken — 15,90€<br>• Duo 7 Big+Cheese — 14,90€<br>• Duo 8 Géant+Cheese — 14,90€<br>• Duo 9 Chèvre+Kiri — 15,90€", choices:[
+      {label:'Duo 1 (Big+Géant)', value:'Duo 1'},
+      {label:'Duo 5 (Big+Chicken)', value:'Duo 5'},
+      {label:'Duo 7 (Big+Cheese)', value:'Duo 7'},
+      {label:'Duo 9 (Chèvre+Kiri)', value:'Duo 9'}
+    ] };
+  }
+  // SALADES
+  if(any(msg, ['salade','crudites','crudités','sain','healthy'])){
+    return { text:"🥗 Nos <b>3 salades</b> (avec boisson) :<br>• <b>Salade César</b> — 15,50€<br>• <b>Salade Burrata</b> — 15,50€<br>• <b>Salade Chèvre</b> — 15,90€", choices:[
+      {label:'César 15,50€', value:'Salade César'},
+      {label:'Burrata 15,50€', value:'Salade Burrata'},
+      {label:'Chèvre 15,90€', value:'Salade Chèvre'}
+    ] };
+  }
+  // BRASSERIE / PLAT À TABLE
+  if(any(msg, ['plat ','assiette','manger a table','restau','brasserie','escalope','brochettes','thai'])){
+    return { text:"🍷 Nos plats <b>brasserie</b> (plat + accompagnement + boisson) :<br>• Escalope Forestière — 20,70€<br>• Escalope Poivrée — 20,70€<br>• Brochettes de Poulet — 20,70€<br>• Poulet Thaï — 21,90€<br>• Mexican Beef — 25,90€<br>• Camembert Rôti — 25,90€", choices:[
+      {label:'Escalope Forestière', value:'Escalope Forestière'},
+      {label:'Brochettes Poulet', value:'Brochettes de Poulet'},
+      {label:'Poulet Thaï', value:'Poulet Thaï'},
+      {label:'Mexican Beef', value:'Mexican Beef'}
+    ] };
+  }
+  // PÂTES
+  if(any(msg, ['pates','pâtes','pasta','italien'])){
+    return { text:"🍝 Nos <b>pâtes</b> (avec boisson) :<br>• <b>Alfredo</b> — 16,70€<br>• <b>Scampia</b> — 18,00€", choices:[
+      {label:'Alfredo 16,70€', value:'Alfredo'},
+      {label:'Scampia 18€', value:'Scampia'}
+    ] };
+  }
+  // BURGER GÉNÉRIQUE
+  if(any(msg, [' burger ','un burger','le burger','quel burger']) && !findItem(rawMsg)){
+    return { text:"🍔 Pour un burger, nos best-sellers :", choices:[
+      {label:'💪 Big 8,90€', value:'Big Burger'},
+      {label:'🍔 Géant 8,75€', value:'Géant Burger'},
+      {label:'🔥 Whoop 10,90€', value:'Whoop'},
+      {label:'🧀 Double Cheese 8,75€', value:'Double Cheeseburger'},
+      {label:'🐐 Chèvre 9€', value:'Chèvre Burger'}
+    ] };
+  }
+  // SANDWICHES / WRAP
+  if(any(msg, ['sandwich','sand','wrap','panini','tortilla'])){
+    return { text:"🥖 Nos <b>sandwiches</b> (pain au choix) :<br>• Curry — 12,30€<br>• Tandoori — 12,30€<br>• Duo Mix — 12,30€<br>• Parigo — 12,30€<br>• Américain — 8,00€<br>• Wrap Tenders — 9€<br>• Wrap Steak — 9€", choices:[
+      {label:'🍛 Curry 12,30€', value:'Curry'},
+      {label:'🌶️ Tandoori 12,30€', value:'Tandoori'},
+      {label:'🇺🇸 Américain 8€', value:'Américain'},
+      {label:'🌯 Wrap Tenders 9€', value:'Wrap Tenders'}
+    ] };
+  }
+  // BOISSONS
+  if(any(msg, [' boire','soif','boisson','drink','quoi boire']) && !any(msg,['avec'])){
+    return { text:"🥤 On a une grande sélection :", choices:[
+      {label:'Coca 2,80€', value:'Coca'},
+      {label:'Sprite 2,80€', value:'Sprite'},
+      {label:'Oasis Tropical 2,80€', value:'Oasis Tropical'},
+      {label:'Ice Tea 2,80€', value:'Ice Tea'},
+      {label:'Schweppes 2,80€', value:'Schweppes'},
+      {label:'Perrier 2,80€', value:'Perrier'},
+      {label:'Mojito 5,90€', value:'Citronnade Mojito'},
+      {label:'Tea Hibiscus 5,90€', value:'Tea Hibiscus'}
+    ] };
+  }
+  if(any(msg, ['rafraichi','citron','menthe','frais a boire'])){
+    return { item:get('citro-mojito'), text:"La <b>Citronnade Mojito</b> 🌿 — fraîcheur garantie, menthe et glaçons. <b>5,90€</b>", action:'suggest' };
+  }
+  // DESSERTS
+  if(any(msg, ['dessert','fin de repas','gourmand','sucrerie','sucre ','quelque chose de sucre'])){
+    return { text:"🍰 Nos desserts :", choices:[
+      {label:'Tiramisu 5,90€', value:'Tiramisu'},
+      {label:'Croffle 5,90€', value:'Croffle'},
+      {label:'Creamy Croffle 6,90€', value:'Creamy Croffle'},
+      {label:'Sundae 4,90€', value:'Sundae'},
+      {label:'Tartes 4,90€', value:'Tartes'},
+      {label:'Milkshake 5,90€', value:'Milkshake'}
+    ] };
+  }
+  // PETITE FAIM / SNACK
+  if(any(msg, ['accompagn','a cote','en plus','snack','petite faim','en attendant'])){
+    return { text:"🍗 <b>Petite faim</b> :", choices:[
+      {label:'Croc 4,50€', value:'Croc'},
+      {label:'Tenders x3 8€', value:'Tenders'},
+      {label:'Nuggets x6 8€', value:'Nuggets'},
+      {label:'Mozza Sticks x6 8€', value:'Mozza Sticks'},
+      {label:'Jalapenos x6 8€', value:'Jalapenos'}
+    ] };
+  }
+  // INDÉCISION
+  if(any(msg, ['sais pas','aucune idee','sais po','j hesite','hesit','je ne sais','euh '])){
+    return { text:"Pas de souci ! 🤔 Vous préférez :", choices:[
+      {label:'🥩 Bœuf / Burger', value:'bœuf'},
+      {label:'🍗 Poulet', value:'poulet'},
+      {label:'🧀 Naan / Sandwich', value:'naan'},
+      {label:'🥗 Salade', value:'salade'},
+      {label:'🌯 Tacos', value:'tacos'}
+    ] };
+  }
+  // HALAL VRAIMENT
+  if(any(msg, ['vraiment halal','sur que','sure que','c est vrai','vraiment certif'])){
+    return { text:"✅ Oui <b>100% halal certifié</b>. Toute notre viande est tracée et halal. C'est un engagement Seven Times 🤝", action:'info' };
+  }
+  return null;
+}
+
+/* ============ ROUTEUR PRINCIPAL ============ */
+function processMessage(rawMsg){
+  const msg = normalize(rawMsg);
+  if(!msg.trim()) return;
+
+  if(chatState.step !== 'idle') return handleOrderFlow(rawMsg, msg);
+
+  // Salutations
+  if(any(msg, ['bonjour','salut ','hello','coucou','bonsoir','assalam','salam','aleykoum','aleikoum',' yo ',' hi '])){
+    return botReply("Salam aleykoum 👋\nBienvenue chez <b>Seven Times</b> Vaulx-en-Velin !\n\nJe peux vous aider à :\n🛒 Passer commande\n📋 Voir le menu\n💰 Connaître les prix\n📞 Nous contacter", true);
+  }
+  // Halal
+  if(any(msg, ['halal','certif','achahada','muslim','musulman','porc','licite']) && !any(msg, ['vraiment','sur que'])){
+    return botReply("✅ <b>Oui, Seven Times est 100% halal certifié.</b><br>Toute notre viande est halal — bœuf, poulet, jambon de dinde et bacon de bœuf 🤝", true);
+  }
+  // Menu
+  if(any(msg, ['menu ','la carte','la liste','specialite','vos plat','vos burger','que vendez','tout ce que'])){
+    return botReply(buildMenuHTML(), true, 1100);
+  }
+  // Horaires
+  if(any(msg, ['horaire','ouvert','ferme','heure','quand','tard','minuit','matin'])){
+    return botReply("🕒 <b>Nos horaires</b><br>• Dimanche → Jeudi : <b>11h - 02h</b><br>• Vendredi : <b>15h - 02h</b><br>• Samedi : <b>11h - 02h</b><br><br>On vous attend jusqu'à tard 🌙", true);
+  }
+  // Adresses
+  if(any(msg, ['adresse','ou se trouve','localisation','restaurant','ou aller',' pres ',' près ','metro','parking','vaulx','velin'])){
+    return botReply("📍 <b>Seven Times Vaulx-en-Velin</b><br>23 Rue des Sept Chemins<br>69120 Vaulx-en-Velin<br><br>📞 +33 6 15 27 69 60", true);
+  }
+  // Téléphone direct
+  if(any(msg, ['telephone','tel ','numero','appeler','contact'])){
+    return botReply("📞 Vous pouvez nous appeler au <b>+33 6 15 27 69 60</b> 🤝", true);
+  }
+  // Livraison
+  if(any(msg, ['livraison','livrer','uber','deliveroo','just eat','domicile'])){
+    return botReply("🛵 Livraison via :<br>✅ Uber Eats<br>✅ Deliveroo<br>✅ Just Eat<br><br>Ou commandez ici en mode <b>À emporter</b> 🤝", true);
+  }
+  // Prix
+  if(any(msg, ['prix ','combien','coute','tarif','c est cher'])){
+    return botReply("💰 <b>NOS PRIX</b><br><br>🍔 Burgers : 5,50€ → 9,00€<br>🔥 Whoop : 10,90€ → 13,90€<br>🥖 Sandwiches : 8,00€ → 12,30€<br>🧀 Naans : 10,70€ → 12,70€<br>🎁 Duos : 14,90€ → 15,90€<br>👨‍👩‍👦 Menu Family : 31,90€<br>🍝 Pâtes : 16,70€ → 18,00€<br>🥗 Salades : 15,50€ → 15,90€<br>🍷 Brasserie : 20,70€ → 25,90€<br>🥤 Sodas : 2,80€<br>🍵 Tea & Citronnade : 5,90€<br><br>Tapez \"menu\" pour la carte complète", true);
+  }
+  // Allergènes / végé
+  if(any(msg, ['allerg','gluten','lactose','intoler'])){
+    return botReply("⚠️ La majorité de nos produits contiennent gluten et lactose. Pour une allergie sévère, appelez-nous avant la commande, on s'adapte 🤝", true);
+  }
+  if(any(msg, [' vege ',' vegan','vegetarien','sans viande'])){
+    return botReply("🌱 Sur demande : alternative <b>steak végétal</b> sur l'Addict et l'Original Burger ✨", true);
+  }
+  // Recommandation
+  if(any(msg, ['recommand','conseil','meilleur','populair','le top','quoi prendre'])){
+    return botReply("⭐ <b>BEST-SELLERS</b><br><br>1️⃣ <b>Addict</b> ❤️ — signature 11,90€<br>2️⃣ <b>Snow</b> ❄️ — beef raclette 10,90€<br>3️⃣ <b>Bigsmash</b> 💪 — grosse faim 11,40€<br>4️⃣ <b>Goat</b> 🐐 — chèvre & miel 10,90€", true, 900, [
+      {label:'🔥 Addict', value:'Addict Burger'},
+      {label:'❄️ Snow', value:'Snow Burger'},
+      {label:'💪 Bigsmash', value:'Bigsmash Burger'},
+      {label:'🐐 Goat', value:'Goat Burger'}
+    ]);
+  }
+  // Remerciements / au revoir
+  if(any(msg, ['merci','thanks','baraka','choukran'])){
+    return botReply("Avec plaisir ! 🤝 Bon appétit chez Seven Times ! 🍔");
+  }
+  if(any(msg, ['au revoir','bye','a bientot'])){
+    return botReply("À bientôt chez Seven Times ! 👋");
+  }
+  if(any(msg, ['humain','quelqu un','reclamation','probleme','manager'])){
+    return botReply("📞 Je vous mets en relation avec l'équipe. Donnez-moi votre ville pour le numéro direct 🤝");
+  }
+
+  // Réponses oui/non/ouep — quand bot a posé une question
+  if(/^(oui|yes|ouep|ok|d ?accord|go|c est bon|valide|confirme|👍)\s*$/.test(msg.trim())){
+    return startOrder();
+  }
+  if(/^(non|no|nope|pas maintenant|annule|stop|👎)\s*$/.test(msg.trim())){
+    return botReply("Pas de souci ! Que puis-je faire d'autre pour vous ? 🤝");
+  }
+
+  // === BOISSONS ALTERNATIVES (Oasis, Sprite, Bière...) ===
+  const altDrink = handleAlternativeDrinks(msg);
+  if(altDrink) return botReply(altDrink, true);
+
+  // === QUESTIONS SUR LES PLATS ===
+  const dishAnswer = answerAboutDish(rawMsg, msg);
+  if(dishAnswer) return botReply(dishAnswer, true);
+
+  // === INTENTIONS HUMAINES (pour 2, pour enfant, copieux, rapide...) ===
+  const human = handleHumanIntent(msg);
+  if(human){
+    if(human.action === 'suggest' && human.item){
+      chatState.order = { items:[], pendingItem:human.item, mode:null, name:null };
+      chatState.step = 'order_format_proposal';
+      return botReply(human.text, true, 800, [
+        {label:'✅ Oui', value:'oui'},
+        {label:'❌ Non', value:'non'}
+      ]);
+    }
+    if(human.choices) return botReply(human.text, true, 800, human.choices);
+    return botReply(human.text, true);
+  }
+
+  // === PARSING COMPLET (burger + boisson + side dans une seule phrase) ===
+  const parsed = parseFullOrder(rawMsg);
+  if(parsed.burger && (parsed.drink || parsed.side || parsed.hasMenu)){
+    return handleFullOrder(parsed);
+  }
+  // Plusieurs items sans burger principal : ex "tenders et un coca"
+  if(!parsed.burger && parsed.drink && parsed.side){
+    chatState.order = { items:[{...parsed.side}, {...parsed.drink}], pendingItem:null, mode:null, name:null };
+    chatState.step = 'order_mode';
+    let total = parsed.side.price + parsed.drink.price;
+    return botReply("✅ J'ai noté :<br>• "+parsed.side.name+" — "+parsed.side.price.toFixed(2)+"€<br>• "+parsed.drink.name+" — "+parsed.drink.price.toFixed(2)+"€<br><br><b>Total : "+total.toFixed(2)+"€</b><br><br>📍 Sur place ou à emporter ?", true, 800, [
+      {label:'🍽️ Sur place', value:'sur place'},
+      {label:'🥡 À emporter', value:'à emporter'}
+    ]);
+  }
+
+  // === DÉTECTION DIRECTE D'UN PLAT ===
+  const item = findItem(rawMsg);
+  if(item){
+    if(item.cat === 'signature' || item.cat === 'classique'){
+      const qty = parsed.quantity || 1;
+      const displayName = qty > 1 ? qty+'× '+item.name : item.name;
+      const totalPrice = item.price * qty;
+      // Si "seul" mentionné → directement seul
+      if(parsed.hasSeul){
+        chatState.order = { items:[{...item, name:displayName, price:totalPrice}], pendingItem:null, qty:1, mode:null, name:null };
+        chatState.step = 'order_mode';
+        return botReply("✅ <b>"+displayName+"</b> seul — "+totalPrice.toFixed(2)+"€", true, 700, [
+          {label:'🍽️ Sur place', value:'sur place'},
+          {label:'🥡 À emporter', value:'à emporter'}
+        ]);
+      }
+      chatState.order = { items:[], pendingItem:item, qty:qty, mode:null, name:null };
+      chatState.step = 'order_format';
+      const intro = qty > 1
+        ? "C'est noté ! 🔥 <b>"+qty+"× "+item.name+"</b> ("+totalPrice.toFixed(2)+"€)<br><br>Vous les prenez :"
+        : "Excellent choix ! 🔥 <b>"+item.name+"</b><br><br>"+item.desc+"<br><br>Vous le prenez :";
+      return botReply(intro, true, 900, [
+        {label:'🥤 En menu', value:'en menu'},
+        {label:'🍔 Seul', value:'seul'}
+      ]);
+    } else {
+      // Si plusieurs quantités
+      const qty = parsed.quantity || 1;
+      const itemMulti = qty > 1 ? { ...item, name:qty+'× '+item.name, price:item.price*qty } : {...item};
+      chatState.order = { items:[itemMulti], pendingItem:null, mode:null, name:null };
+      chatState.step = 'order_mode';
+      return botReply("✅ <b>"+itemMulti.name+"</b> ("+itemMulti.price.toFixed(2)+"€)", true, 800, [
+        {label:'🍽️ Sur place', value:'sur place'},
+        {label:'🥡 À emporter', value:'à emporter'}
+      ]);
+    }
+  }
+
+  // === INTELLIGENCE FAST-FOOD (suggestions) ===
+  const sugg = getSmartSuggestion(rawMsg, msg);
+  if(sugg){
+    if(sugg.action === 'suggest' && sugg.item){
+      // Pré-stocker l'item et proposer de commander
+      chatState.order = { items:[], pendingItem:sugg.item, mode:null, name:null };
+      chatState.step = 'order_format_proposal';
+      return botReply(sugg.text, true, 900, [
+        {label:'✅ Oui je le prends', value:'oui'},
+        {label:'❌ Non merci', value:'non'}
+      ]);
+    }
+    if(sugg.choices){
+      return botReply(sugg.text, true, 900, sugg.choices);
+    }
+    if(sugg.text){
+      return botReply(sugg.text, true);
+    }
+  }
+
+  // Commander (sans plat précisé)
+  if(any(msg, ['command','je veux','je voudrais','aimerais','souhaite','order','j ai faim','passer','prendre','manger'])){
+    return startOrder();
+  }
+
+  // === FALLBACK INTELLIGENT ===
+  return botReply("Hmm, je ne suis pas sûr de comprendre 🤔<br><br>Chez Seven Times, je peux vous proposer :<br>🍔 <b>Burgers</b> : Big, Géant, Cheeseburger, Chicken, Whoop...<br>🎁 <b>Duos</b> : 9 combinaisons à partir de 14,90€<br>🧀 <b>Cheese Naans</b> : Curry, Tandoori, Tenders, Boursin...<br>🥖 <b>Sandwiches & Wraps</b><br>🥗 <b>Salades</b> : César, Burrata, Chèvre<br>🍝 <b>Pâtes</b> : Alfredo, Scampia<br>🍷 <b>Brasserie</b> : Escalopes, Brochettes, Mexican Beef<br>👨‍👩‍👦 <b>Menu Family</b> 31,90€<br><br>Tapez le nom d'un plat, \"menu\" pour la carte, ou décrivez ce qui vous tente !", true, 1000, [
+    {label:'📋 Voir le menu', value:'le menu'},
+    {label:'🛒 Commander', value:'commander'},
+    {label:'⭐ Recommandez-moi', value:'recommande moi'}
+  ]);
+}
+
+function startOrder(){
+  chatState.step = 'order_burger';
+  chatState.order = { items:[], pendingItem:null, mode:null, name:null };
+  return botReply("Avec plaisir ! 🛒<br>Que souhaitez-vous commander ?<br><br>Vous pouvez écrire ce que vous voulez, par exemple :<br>• \"Un Big Burger\"<br>• \"Le Whoop avec Coca\"<br>• \"Duo 1\" ou \"Menu Family\"<br>• \"Naan Tandoori\" ou \"Salade Burrata\"", true, 800, [
+    {label:'💪 Big Burger', value:'Big Burger'},
+    {label:'🔥 Le Whoop', value:'Whoop'},
+    {label:'🎁 Duo 1', value:'Duo 1'},
+    {label:'🧀 Naan Tandoori', value:'Naan Tandoori'},
+    {label:'📋 Voir le menu', value:'le menu'}
+  ]);
+}
+
+/* ============ COMMANDE COMPLÈTE EN UNE PHRASE (Seven Times) ============
+   Chez Seven Times pas de menu forfaitaire : on a des Duos pré-définis (14,90/15,90€)
+   ou on commande un burger + boisson séparément. */
+function handleFullOrder(parsed){
+  const burger = parsed.burger;
+  const qty = parsed.quantity || 1;
+
+  // Burger toujours, drink/side selon parsing
+  const items = [];
+  let burgerLabel = (qty>1?qty+'× ':'')+burger.name;
+  let burgerTotal = burger.price * qty;
+  items.push({ ...burger, name: burgerLabel, price: burgerTotal });
+  let total = burgerTotal;
+  let summary = "<b>"+burgerLabel+"</b> ("+burgerTotal.toFixed(2)+"€)";
+
+  if(parsed.drink){
+    items.push({ ...parsed.drink });
+    total += parsed.drink.price;
+    summary += "<br>+ <b>"+parsed.drink.name+"</b> ("+parsed.drink.price.toFixed(2)+"€)";
+  }
+  if(parsed.side){
+    items.push({ ...parsed.side });
+    total += parsed.side.price;
+    summary += "<br>+ <b>"+parsed.side.name+"</b> ("+parsed.side.price.toFixed(2)+"€)";
+  }
+
+  chatState.order = { items, pendingItem:null, mode:null, name:null };
+  chatState.step = 'order_mode';
+
+  // Astuce commerciale : suggérer un Duo si applicable
+  let duoHint = "";
+  if(qty === 1 && parsed.drink){
+    if(/big/i.test(burger.name)){
+      duoHint = "<br><br>💡 <i>Astuce : le <b>Duo 7</b> (Big + Cheese) à 14,90€ inclut frites + boisson.</i>";
+    } else if(/géant|geant/i.test(burger.name)){
+      duoHint = "<br><br>💡 <i>Astuce : le <b>Duo 8</b> (Géant + Cheese) à 14,90€ inclut frites + boisson.</i>";
+    }
+  }
+
+  return botReply("✅ Parfait !<br>"+summary+"<br><b>Total : "+total.toFixed(2)+"€</b>"+duoHint+"<br><br>📍 Sur place ou à emporter ?", true, 800, [
+    {label:'🍽️ Sur place', value:'sur place'},
+    {label:'🥡 À emporter', value:'à emporter'}
+  ]);
+}
+
+/* ============ FLOW COMMANDE ============ */
+function handleOrderFlow(rawMsg, msg){
+  if(any(msg, ['annul ','stop ','retour','quitter']) && chatState.step !== 'order_confirm'){
+    chatState.step = 'idle';
+    return botReply("❌ Commande annulée. Que puis-je faire d'autre ?");
+  }
+
+  // ÉTAPE Q+0 : ajouter frites au menu (depuis parsing complet)
+  if(chatState.step === 'order_add_fries'){
+    const it = chatState.order.pendingItem;
+    const drink = chatState.order.pendingDrink;
+    const qty = chatState.order.quantity || 1;
+    let menuPrice = it.cat === 'signature' ? 13.90 : 10.50;
+    if(drink && drink.id === 'milkshake') menuPrice += 1;
+    if(drink && drink.id === 'mojito') menuPrice += 2;
+    let sideLabel = 'Frites';
+    let menuTotal = menuPrice * qty;
+
+    if(any(msg, ['oui','frite','fries','d accord','ok','yes','volontiers','avec'])){
+      sideLabel = 'Frites';
+    } else if(any(msg, ['potato','patate','plutot pot'])){
+      sideLabel = 'Potatoes';
+    } else if(any(msg, ['non','sans','pas de frite','rien','c est bon'])){
+      // Sans frites → juste burger + boisson séparément (pas de prix menu)
+      const burgerPrice = it.price * qty;
+      chatState.order.items.push({ id:it.id, name:(qty>1?qty+'× ':'')+it.name+' (sans menu)', price:burgerPrice, cat:'classique' });
+      chatState.order.items.push({...drink});
+      chatState.order.pendingItem = null;
+      chatState.order.pendingDrink = null;
+      chatState.step = 'order_mode';
+      return botReply("✅ Sans accompagnement, c'est noté !<br>"+(qty>1?qty+'× ':'')+it.name+" + "+drink.name+" — <b>"+(burgerPrice + drink.price).toFixed(2)+"€</b>", true, 700, [
+        {label:'🍽️ Sur place', value:'sur place'},
+        {label:'🥡 À emporter', value:'à emporter'}
+      ]);
+    } else {
+      return botReply("Tapez ou cliquez :", true, 500, [
+        {label:'✅ Oui frites', value:'oui frites'},
+        {label:'🥔 Plutôt potatoes', value:'potatoes'},
+        {label:'❌ Non merci', value:'non merci'}
+      ]);
+    }
+    chatState.order.items.push({
+      id:'menu-'+it.id,
+      name:(qty>1?qty+'× ':'')+'Menu '+it.name+' ('+sideLabel+' + '+drink.name+')',
+      price:menuTotal,
+      cat:'menu'
+    });
+    chatState.order.pendingItem = null;
+    chatState.order.pendingDrink = null;
+    chatState.step = 'order_mode';
+    return botReply("✅ Parfait ! Menu "+it.name+" + "+sideLabel+" + "+drink.name+" — <b>"+menuTotal.toFixed(2)+"€</b>", true, 700, [
+      {label:'🍽️ Sur place', value:'sur place'},
+      {label:'🥡 À emporter', value:'à emporter'}
+    ]);
+  }
+
+  // Pendant suggestion (proposition)
+  if(chatState.step === 'order_format_proposal'){
+    if(/^(oui|yes|ouep|ok|d ?accord|go|c est bon|valide|confirme|👍|je le prends|je prends)/.test(msg.trim())){
+      const it = chatState.order.pendingItem;
+      // Si c'est déjà un menu complet, l'ajouter direct au panier (pas de "menu/seul")
+      if(it.cat === 'menu'){
+        chatState.order.items.push({...it});
+        chatState.order.pendingItem = null;
+        chatState.step = 'order_mode';
+        return botReply("✅ <b>"+it.name+"</b> — "+it.price.toFixed(2)+"€", true, 700, [
+          {label:'🍽️ Sur place', value:'sur place'},
+          {label:'🥡 À emporter', value:'à emporter'}
+        ]);
+      }
+      chatState.step = 'order_format';
+      return botReply("Top ! 🔥 Vous prenez le <b>"+it.name+"</b> :", true, 700, [
+        {label:'🥤 En menu', value:'en menu'},
+        {label:'🍔 Seul', value:'seul'}
+      ]);
+    }
+    if(/^(non|no|nope|pas maintenant|annule|stop|👎|merci)/.test(msg.trim())){
+      chatState.step = 'idle';
+      chatState.order = { items:[], pendingItem:null, mode:null, name:null };
+      return botReply("Pas de souci ! Que voulez-vous d'autre ? Tapez \"menu\" ou décrivez ce qui vous tente 🤝");
+    }
+    // L'user a peut-être tapé autre chose → traiter normalement
+    chatState.step = 'idle';
+    return processMessage(rawMsg);
+  }
+
+  // ÉTAPE 1 : Choix du plat (après "commander")
+  if(chatState.step === 'order_burger'){
+    if(any(msg, ['menu ','la carte','la liste'])){
+      return botReply(buildMenuHTML(), true, 1000);
+    }
+    const item = findItem(rawMsg);
+    if(!item){
+      // Tester suggestion
+      const sugg = getSmartSuggestion(rawMsg, msg);
+      if(sugg){
+        if(sugg.action === 'suggest' && sugg.item){
+          chatState.order.pendingItem = sugg.item;
+          chatState.step = 'order_format_proposal';
+          return botReply(sugg.text, true, 800, [
+            {label:'✅ Oui', value:'oui'},
+            {label:'❌ Non', value:'non'}
+          ]);
+        }
+        if(sugg.choices){ return botReply(sugg.text, true, 800, sugg.choices); }
+      }
+      return botReply("Hmm, je n'ai pas reconnu ce plat 🤔<br>Essayez : <b>Addict</b>, <b>Snow</b>, <b>Goat</b>, <b>Bigsmash</b>, <b>Original</b>, ou décrivez (épicé, gros, classique...).", true);
+    }
+    // Burger → demander format
+    if(item.cat === 'signature' || item.cat === 'classique'){
+      if(any(msg, [' seul ','tout seul',' juste ','sans menu','sans frite'])){
+        chatState.order.items.push({...item});
+        chatState.step = 'order_mode';
+        return botReply("✅ <b>"+item.name+"</b> seul — "+item.price.toFixed(2)+"€", true, 700, [
+          {label:'🍽️ Sur place', value:'sur place'},
+          {label:'🥡 À emporter', value:'à emporter'}
+        ]);
+      }
+      if(msg.includes('menu') || msg.includes('formule')){
+        chatState.order.pendingItem = item;
+        chatState.step = 'order_drink';
+        return botReply("✅ <b>"+item.name+"</b> en menu (+frites + boisson)<br>Quelle boisson ?", true, 700, [
+          {label:'Coca 2,80€', value:'Coca'},
+          {label:'Sprite 2,80€', value:'Sprite'},
+          {label:'Fanta Orange 2,20€', value:'Fanta Orange'},
+          {label:'Tropico Tropical', value:'Tropico Tropical'},
+          {label:'Fuze Tea Pêche', value:'Fuze Tea Pêche'},
+          {label:'Evian 2,80€', value:'Evian'},
+          {label:'Mojito +2€', value:'Mojito'},
+          {label:'Tea Hibiscus +2€', value:'Tea Hibiscus'}
+        ]);
+      }
+      chatState.order.pendingItem = item;
+      chatState.step = 'order_format';
+      return botReply("Excellent choix ! 🔥 <b>"+item.name+"</b><br>Vous le prenez :", true, 700, [
+        {label:'🥤 En menu', value:'en menu'},
+        {label:'🍔 Seul', value:'seul'}
+      ]);
+    }
+    if(item.cat === 'menu'){
+      chatState.order.items.push({...item});
+      chatState.step = 'order_mode';
+      return botReply("✅ <b>"+item.name+"</b> — "+item.price.toFixed(2)+"€", true, 700, [
+        {label:'🍽️ Sur place', value:'sur place'},
+        {label:'🥡 À emporter', value:'à emporter'}
+      ]);
+    }
+    chatState.order.items.push({...item});
+    chatState.step = 'order_mode';
+    return botReply("✅ <b>"+item.name+"</b> ajouté — "+item.price.toFixed(2)+"€", true, 700, [
+      {label:'🍽️ Sur place', value:'sur place'},
+      {label:'🥡 À emporter', value:'à emporter'}
+    ]);
+  }
+
+  // ÉTAPE 2 : Format menu/seul
+  if(chatState.step === 'order_format'){
+    const it = chatState.order.pendingItem;
+    // Si pendingItem est déjà un menu complet, l'ajouter direct (filet de sécurité)
+    if(it && it.cat === 'menu'){
+      chatState.order.items.push({...it});
+      chatState.order.pendingItem = null;
+      chatState.step = 'order_mode';
+      return botReply("✅ <b>"+it.name+"</b> — "+it.price.toFixed(2)+"€", true, 700, [
+        {label:'🍽️ Sur place', value:'sur place'},
+        {label:'🥡 À emporter', value:'à emporter'}
+      ]);
+    }
+    if(any(msg, [' menu','formule','frite','boisson','en menu'])){
+      chatState.step = 'order_drink';
+      return botReply("🍟 En menu, c'est noté ! Quelle boisson ?", true, 700, [
+        {label:'Coca 2,80€', value:'Coca'},
+        {label:'Sprite 2,80€', value:'Sprite'},
+        {label:'Fanta Orange 2,20€', value:'Fanta Orange'},
+        {label:'Tropico Tropical', value:'Tropico Tropical'},
+        {label:'Fuze Tea Pêche', value:'Fuze Tea Pêche'},
+        {label:'Evian 2,80€', value:'Evian'},
+        {label:'Mojito +2€', value:'Mojito'},
+        {label:'Tea Hibiscus +2€', value:'Tea Hibiscus'}
+      ]);
+    }
+    if(any(msg, [' seul','tout seul',' juste','sans menu','sans frite','sans accompagnement'])){
+      const qty = chatState.order.qty || 1;
+      const displayName = qty > 1 ? qty+'× '+it.name : it.name;
+      const totalPrice = it.price * qty;
+      chatState.order.items.push({...it, name:displayName, price:totalPrice});
+      chatState.order.pendingItem = null;
+      chatState.order.qty = 1;
+      chatState.step = 'order_mode';
+      return botReply("✅ <b>"+displayName+"</b> seul — "+totalPrice.toFixed(2)+"€", true, 700, [
+        {label:'🍽️ Sur place', value:'sur place'},
+        {label:'🥡 À emporter', value:'à emporter'}
+      ]);
+    }
+    return botReply("Tapez ou cliquez :", true, 500, [
+      {label:'🥤 En menu', value:'en menu'},
+      {label:'🍔 Seul', value:'seul'}
+    ]);
+  }
+
+  // ÉTAPE 3 : Boisson (si menu)
+  if(chatState.step === 'order_drink'){
+    const it = chatState.order.pendingItem;
+    let drinkName = null, drinkExtra = 0;
+    if(/coca cherry|cherry/.test(msg)) drinkName = 'Coca-Cola Cherry';
+    else if(/coca zero|cola zero|\bzero\b/.test(msg)) drinkName = 'Coca-Cola Zéro';
+    else if(/coca|cola/.test(msg)) drinkName = 'Coca-Cola';
+    else if(/sprite/.test(msg)) drinkName = 'Sprite';
+    else if(/fanta orange/.test(msg)) drinkName = 'Fanta Orange';
+    else if(/fanta citron/.test(msg)) drinkName = 'Fanta Citron';
+    else if(/fanta/.test(msg)) drinkName = 'Fanta Orange';
+    else if(/tropico tropical|tropical/.test(msg)) drinkName = 'Tropico Tropical';
+    else if(/tropico/.test(msg)) drinkName = 'Tropico Original';
+    else if(/fuze.*peche|fuze.*pêche/.test(msg)) drinkName = 'Fuze Tea Pêche';
+    else if(/fuze.*citron|fuze.*menthe/.test(msg)) drinkName = 'Fuze Tea Citron-Menthe';
+    else if(/fuze ?tea|ice ?tea|the glace|thé glacé/.test(msg)) drinkName = 'Fuze Tea Pêche';
+    else if(/capri/.test(msg)) drinkName = 'Capri Sun';
+    else if(/pellegrino|petillante|pétillante/.test(msg)) drinkName = 'San Pellegrino';
+    else if(/evian|eau|water|minerale/.test(msg)) drinkName = 'Evian';
+    else if(/hibiscus/.test(msg)) { drinkName = 'Tea Hibiscus'; drinkExtra = 2; }
+    else if(/pasteque|pastèque/.test(msg)) { drinkName = 'Tea Pastèque'; drinkExtra = 2; }
+    else if(/peche mangue|pêche mangue|mangue/.test(msg)) { drinkName = 'Tea Pêche Mangue'; drinkExtra = 2; }
+    else if(/mojito fraise/.test(msg)) { drinkName = 'Mojito Fraise'; drinkExtra = 2; }
+    else if(/mojito|citronnade/.test(msg)) { drinkName = 'Citronnade Mojito'; drinkExtra = 2; }
+    else if(/curaco|curacao|curaçao|gingembre/.test(msg)) { drinkName = 'Citronnade Curaço'; drinkExtra = 2; }
+    if(!drinkName){
+      const altReply = handleAlternativeDrinks(msg);
+      const drinkChoices = [
+        {label:'Coca 2,80€', value:'Coca'},
+        {label:'Sprite 2,80€', value:'Sprite'},
+        {label:'Fanta Orange 2,20€', value:'Fanta Orange'},
+        {label:'Tropico Tropical', value:'Tropico Tropical'},
+        {label:'Fuze Tea Pêche', value:'Fuze Tea Pêche'},
+        {label:'Evian 2,80€', value:'Evian'},
+        {label:'Mojito +2€', value:'Mojito'},
+        {label:'Tea Hibiscus +2€', value:'Tea Hibiscus'}
+      ];
+      if(altReply){
+        return botReply(altReply, true, 700, drinkChoices);
+      }
+      return botReply("Je n'ai pas reconnu cette boisson 🤔<br>On a : Coca, Sprite, Fanta, Tropico, Fuze Tea, Evian, Mojito, Tea Hibiscus...", true, 700, drinkChoices);
+    }
+    const qty = chatState.order.qty || 1;
+    // Si pendingItem est déjà un menu complet, base = it.price (pas le forfait)
+    // et on n'ajoute pas "Menu " devant son nom (déjà inclus)
+    let menuUnit, menuLabel;
+    if(it.cat === 'menu'){
+      menuUnit = it.price + drinkExtra;
+      menuLabel = it.name;
+    } else {
+      menuUnit = (it.cat === 'signature' ? 13.90 : 10.50) + drinkExtra;
+      menuLabel = 'Menu '+it.name;
+    }
+    const menuTotal = menuUnit * qty;
+    chatState.order.items.push({
+      id:'menu-'+it.id,
+      name:(qty>1?qty+'× ':'')+menuLabel+' ('+drinkName+')',
+      price:menuTotal,
+      cat:'menu'
+    });
+    chatState.order.pendingItem = null;
+    chatState.order.qty = 1;
+    chatState.step = 'order_mode';
+    return botReply("✅ "+(qty>1?qty+'× ':'')+"<b>"+menuLabel+"</b> + frites + "+drinkName+" — <b>"+menuTotal.toFixed(2)+"€</b>", true, 700, [
+      {label:'🍽️ Sur place', value:'sur place'},
+      {label:'🥡 À emporter', value:'à emporter'}
+    ]);
+  }
+
+  // ÉTAPE 4 : Mode service
+  if(chatState.step === 'order_mode'){
+    let mode = null;
+    if(msg.includes('place') || msg.includes(' ici ') || msg.includes('rester') || msg.includes('a table')) mode = 'Sur place';
+    else if(msg.includes('emport') || msg.includes('take') || msg.includes('a la maison') || msg.includes('chez moi')) mode = 'À emporter';
+    else if(msg.includes('livr') || msg.includes('domicile')){
+      return botReply("Désolé, on ne fait pas la livraison directement ici 🥡<br>Mais à emporter c'est possible ! Ou via Uber Eats / Deliveroo / Just Eat.", true, 800, [
+        {label:'🥡 À emporter', value:'à emporter'},
+        {label:'🍽️ Sur place', value:'sur place'}
+      ]);
+    }
+    if(!mode){
+      return botReply("Cliquez ou tapez :", true, 500, [
+        {label:'🍽️ Sur place', value:'sur place'},
+        {label:'🥡 À emporter', value:'à emporter'}
+      ]);
+    }
+    chatState.order.mode = mode;
+    chatState.step = 'order_extras';
+    return botReply("Parfait, <b>"+mode+"</b> ! ✅<br>Voulez-vous ajouter quelque chose ?", true, 800, [
+      {label:'🍟 Frites', value:'Frites'},
+      {label:'🥤 Boisson', value:'boisson'},
+      {label:'🍰 Dessert', value:'dessert'},
+      {label:'✅ Non c\'est tout', value:'non c\'est tout'}
+    ]);
+  }
+
+  // ÉTAPE 5 : Extras
+  if(chatState.step === 'order_extras'){
+    if(any(msg, ['non ','rien','c est bon','c est tout','passer','suivant','suffit','ca ira','ça ira','rien d autre',' tout '])){
+      chatState.step = 'order_name';
+      return botReply("👤 Très bien ! Un petit nom pour la commande ? (votre prénom)", true, 700);
+    }
+    // Sous-catégories
+    if(msg.includes('boisson') && !findItem(rawMsg, ['drink'])){
+      return botReply("🥤 Quelle boisson ?", true, 500, [
+        {label:'Coca 2,80€', value:'Coca'},
+        {label:'Sprite 2,80€', value:'Sprite'},
+        {label:'Fanta Orange 2,20€', value:'Fanta Orange'},
+        {label:'Tropico Tropical', value:'Tropico Tropical'},
+        {label:'Fuze Tea Pêche', value:'Fuze Tea Pêche'},
+        {label:'Evian 2,80€', value:'Evian'},
+        {label:'Mojito 6,90€', value:'Mojito'},
+        {label:'Tea Hibiscus 6,90€', value:'Tea Hibiscus'}
+      ]);
+    }
+    if(msg.includes('dessert') && !findItem(rawMsg, ['dessert'])){
+      return botReply("🍰 Quel dessert ?", true, 500, [
+        {label:'Tiramisu 5,90€', value:'Tiramisu'},
+        {label:'Croffle 5,90€', value:'Croffle'},
+        {label:'Creamy Croffle 6,90€', value:'Creamy Croffle'},
+        {label:'Sundae 4,90€', value:'Sundae'}
+      ]);
+    }
+    const item = findItem(rawMsg, ['side','dessert','drink','classique','signature','menu']);
+    if(!item){
+      // Vérifier si c'est une boisson qu'on n'a pas (Oasis, Sprite, Bière...)
+      const altReply = handleAlternativeDrinks(msg);
+      if(altReply){
+        return botReply(altReply, true);
+      }
+      return botReply("Je n'ai pas reconnu cet article 🤔<br>Tapez le nom d'un plat (Tenders, Frites, Coca, Tiramisu...) ou \"<b>non</b>\" pour finaliser.", true);
+    }
+    chatState.order.items.push({...item});
+    return botReply("✅ <b>"+item.name+"</b> ajouté ("+item.price.toFixed(2)+"€)<br>Autre chose ?", true, 700, [
+      {label:'🍟 Frites', value:'Frites'},
+      {label:'🥤 Boisson', value:'boisson'},
+      {label:'🍰 Dessert', value:'dessert'},
+      {label:'✅ Non c\'est tout', value:'non c\'est tout'}
+    ]);
+  }
+
+  // ÉTAPE 6 : Nom
+  if(chatState.step === 'order_name'){
+    const name = rawMsg.trim().split(' ')[0].slice(0,20);
+    if(name.length < 2){
+      return botReply("Je n'ai pas compris 🤔 Quel est votre prénom ?");
+    }
+    chatState.order.name = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+    return showOrderRecap();
+  }
+
+  // ÉTAPE 7 : Confirmation
+  if(chatState.step === 'order_confirm'){
+    if(/^(oui|yes|ouep|ok|d ?accord|go|c est bon|valide|confirme|👍)/.test(msg.trim())){
+      const num = Math.floor(100 + Math.random()*900);
+      const orderData = {
+        items:[...chatState.order.items],
+        mode:chatState.order.mode,
+        name:chatState.order.name,
+        timestamp:Date.now()
+      };
+      orderHistory[num] = orderData;
+      addPendingBanner(num, orderData);
+      chatState.step = 'idle';
+      chatState.order = { items:[], pendingItem:null, mode:null, name:null };
+      return botReply("🤝 Parfait, c'est noté !<br>Votre commande est en cours d'envoi au restaurant...", true, 600);
+    }
+    if(/^(non|no|nope|modif|chang|annul|recommenc|👎)/.test(msg.trim())){
+      chatState.step = 'idle';
+      chatState.order = { items:[], pendingItem:null, mode:null, name:null };
+      return botReply("Pas de souci ! Tapez \"commander\" pour repartir de zéro 🤝");
+    }
+    return botReply("Confirmez ou modifiez :", true, 500, [
+      {label:'✅ Oui je confirme', value:'oui'},
+      {label:'✏️ Modifier', value:'modifier'}
+    ]);
+  }
+}
+
+function showOrderRecap(){
+  const o = chatState.order;
+  let total = 0;
+  let h = '<div class="order-card"><h4>🧾 Récapitulatif</h4>';
+  o.items.forEach(it=>{
+    total += it.price;
+    h += '<div class="order-line"><span>'+it.name+'</span><span>'+it.price.toFixed(2)+'€</span></div>';
+  });
+  h += '<div class="order-line"><span>📍 '+o.mode+'</span><span></span></div>';
+  h += '<div class="order-line"><span>👤 '+o.name+'</span><span></span></div>';
+  h += '<div class="order-total"><span>TOTAL</span><span>'+total.toFixed(2)+'€</span></div></div>';
+  h += '<br>👉 Confirmez-vous la commande ?';
+  chatState.step = 'order_confirm';
+  return botReply(h, true, 700, [
+    {label:'✅ Oui je confirme', value:'oui'},
+    {label:'✏️ Modifier', value:'modifier'}
+  ]);
+}
+
+/* ============ BANDEAUX COMMANDE ============ */
+function addPendingBanner(orderNum, orderData){
+  const banner = document.createElement('div');
+  banner.className = 'order-banner pending';
+  banner.id = 'banner-'+orderNum;
+  banner.innerHTML = '<div class="banner-row"><span class="pulse-dot"></span><span class="banner-text">🍔 Commande <b>#'+orderNum+'</b> — En attente de confirmation...</span></div>';
+  bannersEl.appendChild(banner);
+  banner._orderNum = orderNum;
+
+  setTimeout(()=> upgradeBanner(banner, orderNum), 3000);
+}
+function upgradeBanner(banner, orderNum){
+  banner.className = 'order-banner accepted';
+  banner.innerHTML = '<div class="banner-row">'
+    + '<span class="banner-icon">🍔</span>'
+    + '<span class="banner-text">Commande <b>#'+orderNum+'</b> — En cours — ~15-20 min</span>'
+    + '<button class="banner-btn" onclick="showReceipt('+orderNum+')">Voir reçu</button>'
+    + '</div>'
+    + '<div class="banner-progress"><div class="banner-progress-fill"></div></div>';
+
+  // Carte stylée
+  setTimeout(()=>{
+    const cardHTML = '<div class="success-card">'
+      + '<div class="check-line">✅ Commande envoyée !</div>'
+      + '<div class="order-num">#'+orderNum+'</div>'
+      + '<div class="delay-info"><b>~15-20 min</b><br>Rendez-vous au comptoir</div>'
+      + '</div>';
+    botReply(cardHTML, true, 600);
+    setTimeout(()=>{
+      botReply("Autre chose ? Vous pouvez continuer à commander ou poser une question 🤝", true, 1000, [
+        {label:'🛒 Nouvelle commande', value:'commander'},
+        {label:'📋 Le menu', value:'le menu'},
+        {label:'🧾 Voir reçu', value:'voir recu '+orderNum}
+      ]);
+    }, 1800);
+  }, 400);
+}
+
+/* ============ MODAL REÇU ============ */
+function generateFakeQR(seed){
+  // QR factice déterministe basé sur le numéro de commande
+  const size = 21;
+  let s = seed * 7919;
+  const rand = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+  let svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" shape-rendering="crispEdges">';
+  svg += '<rect width="21" height="21" fill="#fff"/>';
+  // Random pattern (skip finder zones)
+  for(let y=0; y<21; y++){
+    for(let x=0; x<21; x++){
+      if((x<8 && y<8) || (x>12 && y<8) || (x<8 && y>12)) continue;
+      if(rand() > 0.5) svg += '<rect x="'+x+'" y="'+y+'" width="1" height="1" fill="#000"/>';
+    }
+  }
+  // Finder patterns
+  const drawFinder = (fx, fy) => {
+    svg += '<rect x="'+fx+'" y="'+fy+'" width="7" height="7" fill="#000"/>';
+    svg += '<rect x="'+(fx+1)+'" y="'+(fy+1)+'" width="5" height="5" fill="#fff"/>';
+    svg += '<rect x="'+(fx+2)+'" y="'+(fy+2)+'" width="3" height="3" fill="#000"/>';
+  };
+  drawFinder(0,0); drawFinder(14,0); drawFinder(0,14);
+  svg += '</svg>';
+  return svg;
+}
+
+function showReceipt(num){
+  const data = orderHistory[num];
+  if(!data) return;
+  const date = new Date(data.timestamp);
+  // Date FR : "vendredi 8 mai 2026"
+  const dateStr = date.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  const timeStr = date.getHours().toString().padStart(2,'0')+'h'+date.getMinutes().toString().padStart(2,'0');
+  let total = 0;
+  let itemsHTML = '';
+  data.items.forEach(it=>{
+    total += it.price;
+    // Si le nom commence déjà par "N× ", ne pas re-préfixer ; sinon afficher "1×"
+    const hasQty = /^\d+×\s/.test(it.name);
+    const prefix = hasQty ? '' : '<span style="color:#888">1×</span> ';
+    itemsHTML += '<div class="receipt-line"><span>'+prefix+it.name+'</span><span>'+it.price.toFixed(2)+'€</span></div>';
+  });
+  const html = '<div class="receipt-logo-wrap">'
+    + '<div class="receipt-logo-circle">7</div>'
+    + '<div class="receipt-brand">SEVEN TIMES</div>'
+    + '</div>'
+    + '<div class="receipt-divider-strong"></div>'
+    + '<div class="receipt-num-big">#'+num+'</div>'
+    + '<div class="receipt-date">'+dateStr.charAt(0).toUpperCase()+dateStr.slice(1)+'<br>'+timeStr+'</div>'
+    + '<div class="receipt-divider-strong"></div>'
+    + '<div class="receipt-body">'
+    +   itemsHTML
+    +   '<div class="receipt-divider"></div>'
+    +   '<div class="receipt-total"><span>TOTAL</span><span>'+total.toFixed(2)+'€</span></div>'
+    +   '<div class="receipt-info">📍 Service : <b>'+data.mode+'</b><br>👤 Client : <b>'+(data.name||'—')+'</b></div>'
+    + '</div>'
+    + '<div class="receipt-status">⏱️ Préparation : ~15-20 min<br><span style="font-weight:500;font-size:11.5px">Rendez-vous au comptoir</span></div>'
+    + '<div class="receipt-halal">✅ HALAL CERTIFIÉ ACHAHADA</div>'
+    + '<div class="receipt-qr-wrap">'
+    +   '<div class="receipt-qr">'+generateFakeQR(num)+'</div>'
+    +   '<div class="receipt-qr-label">Présentez ce code au comptoir</div>'
+    + '</div>'
+    + '<div class="receipt-footer">Propulsé par IAbot</div>'
+    + '<div class="receipt-actions">'
+    +   '<button class="receipt-btn close" onclick="closeReceipt()">Fermer</button>'
+    +   '<button class="receipt-btn share" onclick="shareReceipt('+num+')">📤 Partager</button>'
+    +   '<button class="receipt-btn new" onclick="newOrderFromReceipt()">🛒</button>'
+    + '</div>';
+  document.getElementById('receiptContent').innerHTML = html;
+  document.getElementById('receiptModal').classList.add('show');
+}
+
+function shareReceipt(num){
+  const data = orderHistory[num];
+  if(!data) return;
+  let total = 0; data.items.forEach(it=> total+=it.price);
+  const text = '🍔 Seven Times — Commande #'+num+'\n\n'
+    + data.items.map(it=>'• '+it.name+' — '+it.price.toFixed(2)+'€').join('\n')
+    + '\n\nTotal : '+total.toFixed(2)+'€\n📍 '+data.mode+'\n⏱️ ~15-20 min';
+  if(navigator.share){
+    navigator.share({ title:'Seven Times — Commande #'+num, text:text }).catch(()=>{});
+  } else if(navigator.clipboard){
+    navigator.clipboard.writeText(text);
+    alert('Reçu copié ! 📋');
+  } else {
+    alert(text);
+  }
+}
+
+function closeReceipt(){ document.getElementById('receiptModal').classList.remove('show'); }
+function newOrderFromReceipt(){ closeReceipt(); startOrder(); }
+
+/* ============ I/O ============ */
+function handleSend(){
+  const txt = inputEl.value.trim();
+  if(!txt) return;
+  appendMessage(txt, 'user');
+  inputEl.value = '';
+  // Cas spécial "voir recu XXX"
+  const m = txt.match(/voir recu (\d+)/i);
+  if(m){ setTimeout(()=> showReceipt(parseInt(m[1])), 200); return; }
+  setTimeout(()=> processMessage(txt), 200);
+}
+function quickSend(txt){ appendMessage(txt, 'user'); setTimeout(()=> processMessage(txt), 200); }
+inputEl.addEventListener('keypress', e => { if(e.key === 'Enter'){ e.preventDefault(); handleSend(); } });
+
+function resetChat(){
+  chatEl.innerHTML = '';
+  chatState = { step:'idle', order:{items:[],pendingItem:null,mode:null,name:null} };
+  initialMessage();
+}
+
+function initialMessage(){
+  setTimeout(()=>{
+    appendMessage("Bienvenue chez <b>Seven Times</b> ! 🍔<br>Je suis votre assistant. Comment puis-je vous aider ?", 'bot', true);
+  }, 400);
+}
+
+/* === Garde le header sticky même quand le clavier mobile s'ouvre ===
+   Sur iOS Safari, le clavier rétrécit le viewport visuel mais ne déclenche
+   pas un resize standard. On utilise visualViewport API pour ajuster la
+   hauteur du body en temps réel et garder le header visible. */
+function syncBodyToViewport(){
+  const vv = window.visualViewport;
+  const h = vv ? vv.height : window.innerHeight;
+  document.body.style.height = h + 'px';
+  // Si le clavier décale le viewport (iOS Safari), on contre-décale le body
+  if(vv){
+    document.body.style.transform = vv.offsetTop ? 'translateY('+vv.offsetTop+'px)' : '';
+  }
+  // Toujours scroller en haut pour empêcher iOS de pousser la page
+  window.scrollTo(0, 0);
+}
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', syncBodyToViewport);
+  window.visualViewport.addEventListener('scroll', syncBodyToViewport);
+}
+window.addEventListener('resize', syncBodyToViewport);
+window.addEventListener('orientationchange', () => setTimeout(syncBodyToViewport, 100));
+// Quand l'input chat est focus / blur, refixer le viewport
+inputEl.addEventListener('focus', () => setTimeout(syncBodyToViewport, 100));
+inputEl.addEventListener('blur', () => setTimeout(syncBodyToViewport, 100));
+syncBodyToViewport();
+
+initialMessage();
+</script>
+</body>
+</html>
