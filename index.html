@@ -394,6 +394,8 @@ const ITEMS = [
   { id:'coca-cherry', name:'Coca-Cola Cherry 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['coca cherry','cherry'] },
   { id:'coca-zero', name:'Coca-Cola Zero 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['coca zero','zero'] },
   { id:'ice-tea', name:'Ice Tea 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['ice tea','icetea'] },
+  { id:'tropico-original', name:'Tropico Original 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['tropico original','tropico'] },
+  { id:'tropico-tropical', name:'Tropico Tropical 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['tropico tropical','tropical'] },
   { id:'oasis-tropical', name:'Oasis Tropical 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['oasis tropical','oasis'] },
   { id:'oasis-fraise', name:'Oasis Fraise Framboise 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['oasis fraise','fraise framboise'] },
   { id:'oasis-pomme', name:'Oasis Pomme Poire 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['oasis pomme','pomme poire'] },
@@ -402,6 +404,7 @@ const ITEMS = [
   { id:'fanta', name:'Fanta Orange 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['fanta','fanta orange','orange'] },
   { id:'sprite', name:'Sprite 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['sprite'] },
   { id:'perrier', name:'Perrier 33cl', price:2.80, desc:"Eau gazeuse 33cl", cat:'boisson', kw:['perrier','gazeuse'] },
+  { id:'evian', name:'Evian 50cl', price:2.80, desc:"Bouteille 50cl eau plate", cat:'boisson', kw:['evian','eau plate','eau','minerale']  },
   { id:'coca-verre', name:'Coca-Cola en verre', price:3.50, desc:"Bouteille verre", cat:'boisson', kw:['coca verre','bouteille coca'] },
   { id:'orangina-verre', name:'Orangina en verre', price:3.50, desc:"Bouteille verre", cat:'boisson', kw:['orangina'] },
   { id:'coca-1-5l', name:'Coca-Cola 1,5L', price:4.50, desc:"Bouteille 1,5L", cat:'boisson', kw:['coca 1.5','coca 1,5','grande coca'] },
@@ -493,6 +496,31 @@ function findItem(rawTxt, categories=null){
     }
   }
   return best;
+}
+/* findItemVariants : retourne TOUS les items qui matchent partiellement
+   (kw incluse dans msg, msg inclus dans nom, ou nom inclut msg).
+   Sert à détecter les ambiguïtés (ex: "oasis" → 3 variantes) pour
+   proposer une désambiguïsation. */
+function findItemVariants(rawTxt, categories=null){
+  const n = normalize(rawTxt).trim();
+  if(!n || n.length < 3) return [];
+  const out = [];
+  const seen = new Set();
+  for(const it of ITEMS){
+    if(categories && !categories.includes(it.cat)) continue;
+    if(seen.has(it.id)) continue;
+    let matches = false;
+    const itemName = normalize(it.name).trim();
+    if(itemName.includes(n) || n.includes(itemName)) matches = true;
+    if(!matches){
+      for(const k of it.kw){
+        const nk = normalize(k).trim();
+        if(nk && (n.includes(nk) || nk.includes(n))){ matches = true; break; }
+      }
+    }
+    if(matches){ out.push(it); seen.add(it.id); }
+  }
+  return out;
 }
 function get(id){ return ITEMS.find(i=>i.id===id); }
 
@@ -1444,14 +1472,42 @@ function handleOrderFlow(rawMsg, msg){
         {label:'Sundae 4,90€', value:'Sundae'}
       ]);
     }
-    const item = findItem(rawMsg, ['side','dessert','drink','classique','signature','menu']);
+    // Cats Seven Times : on cherche dans tout sauf burger/whoop (déjà commandés)
+    const SEARCH_CATS = ['boisson','tea','dessert','petite-faim','sandwich','naan','tacos','salade','pasta','brasserie','menu-duo','menu-family','menu-kids'];
+    // 1) Match exact via findItem (best match)
+    const exact = findItem(rawMsg, SEARCH_CATS);
+    // 2) Toutes les variantes possibles
+    const variants = findItemVariants(rawMsg, SEARCH_CATS);
+    // Si exact a une kw ≥ 2 mots qui matche EXACTEMENT le msg → ajout direct.
+    // (ex: "oasis tropical" → kw='oasis tropical' = match parfait spécifique)
+    // Mais "oasis" seul (kw='oasis' = 1 mot) → on désambigüe entre les 3 Oasis.
+    const msgClean = normalize(rawMsg).trim();
+    const exactPerfect = exact && exact.kw.some(k => {
+      const nk = normalize(k).trim();
+      return nk === msgClean && nk.split(/\s+/).length >= 2;
+    });
+    // Si plusieurs variantes ET pas de match parfait spécifique → désambiguïsation
+    if(variants.length > 1 && !exactPerfect){
+      const choices = variants.slice(0, 8).map(v => ({
+        label: v.name + ' ' + v.price.toFixed(2).replace('.',',') + '€',
+        value: v.name
+      }));
+      const intro = /oasis/i.test(rawMsg) ? '🍊 Quelle Oasis ?'
+                  : /tropico/i.test(rawMsg) ? '🥭 Quel Tropico ?'
+                  : /coca/i.test(rawMsg) ? '🥤 Quel Coca ?'
+                  : /\btea\b|the |thé/i.test(rawMsg) ? '🍵 Quel Tea ?'
+                  : /mojito/i.test(rawMsg) ? '🌿 Quel Mojito ?'
+                  : /citronnade/i.test(rawMsg) ? '🍋 Quelle citronnade ?'
+                  : /tiramisu/i.test(rawMsg) ? '🧁 Quel Tiramisu ?'
+                  : 'Plusieurs choix possibles, lequel ?';
+      return botReply(intro, true, 500, choices);
+    }
+    // 3) Match unique → ajout direct
+    const item = exact || variants[0];
     if(!item){
-      // Vérifier si c'est une boisson qu'on n'a pas (Oasis, Sprite, Bière...)
       const altReply = handleAlternativeDrinks(msg);
-      if(altReply){
-        return botReply(altReply, true);
-      }
-      return botReply("Je n'ai pas reconnu cet article 🤔<br>Tapez le nom d'un plat (Tenders, Frites, Coca, Tiramisu...) ou \"<b>non</b>\" pour finaliser.", true);
+      if(altReply) return botReply(altReply, true);
+      return botReply("Je n'ai pas reconnu cet article 🤔<br>Tapez le nom d'un plat (Tenders, Coca, Tiramisu, Naan...) ou \"<b>non</b>\" pour finaliser.", true);
     }
     chatState.order.items.push({...item});
     return botReply("✅ <b>"+item.name+"</b> ajouté ("+item.price.toFixed(2)+"€)<br>Autre chose ?", true, 700, [
