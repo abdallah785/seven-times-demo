@@ -1672,10 +1672,9 @@ function resetChat(){
 
 function injectShopInfo(){
   const card = document.createElement('div');
-  card.className = 'shop-card';
+  // État initial = fermé. Ouvre via le bouton ℹ️.
+  card.className = 'shop-card collapsed';
   card.id = 'shop-card';
-  // Restaurer l'état précédent (collapsed/expanded) depuis localStorage
-  if(localStorage.getItem('seven-shop-collapsed') === '1') card.classList.add('collapsed');
   card.innerHTML =
     '<div class="shop-row"><span class="ico">📍</span><span><b>Seven Times Vaulx-en-Velin</b><br>23 Rue des Sept Chemins, 69120 Vaulx-en-Velin</span></div>'
   + '<div class="shop-row"><span class="ico">🕒</span><span>Dim-Jeu : <b>11h - 02h</b><br>Vendredi : <b>15h - 02h</b><br>Samedi : <b>11h - 02h</b></span></div>'
@@ -1696,7 +1695,6 @@ function toggleShopInfo(){
   if(!card) return;
   const willCollapse = !card.classList.contains('collapsed');
   card.classList.toggle('collapsed', willCollapse);
-  try { localStorage.setItem('seven-shop-collapsed', willCollapse ? '1' : '0'); } catch(e) {}
   const btn = document.getElementById('info-btn');
   if(btn) btn.classList.toggle('active', !willCollapse);
 }
