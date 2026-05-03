@@ -121,6 +121,33 @@
   .choice-btn:active{background:var(--primary);color:#fff;transform:scale(.96)}
   .choice-btn.disabled{opacity:.35;cursor:not-allowed;pointer-events:none;border-style:dashed}
 
+  /* Shop info card — scrollable, injectée en haut du chat */
+  .shop-card{
+    background:#0d0d0d;border:1px solid #2a2a2a;border-radius:14px;
+    padding:14px 16px;margin:4px 4px 14px;
+    display:flex;flex-direction:column;gap:10px;
+    animation:fadeIn .35s ease-out
+  }
+  .shop-card .shop-row{display:flex;align-items:flex-start;gap:10px;font-size:13.5px;line-height:1.45;color:#e8e8e8}
+  .shop-card .shop-row .ico{font-size:16px;flex-shrink:0;line-height:1.3}
+  .shop-card .shop-row b{color:#fff;font-weight:600}
+  .shop-card .halal-badge{
+    display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.3px;
+    color:#15803d;background:#dcfce7;padding:4px 10px;border-radius:10px;
+    align-self:flex-start
+  }
+  .shop-card .shop-actions{display:flex;gap:8px;margin-top:4px}
+  .shop-btn{
+    flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
+    padding:11px 8px;border-radius:11px;font-size:13.5px;font-weight:700;
+    text-decoration:none;cursor:pointer;border:none;font-family:inherit;
+    transition:.15s;white-space:nowrap
+  }
+  .shop-btn.primary{background:var(--primary);color:#000;box-shadow:0 2px 8px rgba(255,210,0,.3)}
+  .shop-btn.primary:active{transform:scale(.96);background:var(--primary-dark)}
+  .shop-btn.secondary{background:#1a1a1a;color:#fff;border:1px solid #333}
+  .shop-btn.secondary:active{background:#222;transform:scale(.96)}
+
   .quick-replies{padding:8px 12px;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;flex-shrink:0;background:var(--bg)}
   .quick-replies::-webkit-scrollbar{display:none}
   .chip{
@@ -235,9 +262,6 @@
   <div class="header-icons">
     <button class="icon-btn" onclick="resetChat()" aria-label="Recommencer">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-    </button>
-    <button class="icon-btn" aria-label="Paramètres">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
   </div>
 </div>
@@ -1631,7 +1655,23 @@ inputEl.addEventListener('keypress', e => { if(e.key === 'Enter'){ e.preventDefa
 function resetChat(){
   chatEl.innerHTML = '';
   chatState = { step:'idle', order:{items:[],pendingItem:null,mode:null,name:null} };
+  injectShopInfo();
   initialMessage();
+}
+
+function injectShopInfo(){
+  const card = document.createElement('div');
+  card.className = 'shop-card';
+  card.innerHTML =
+    '<div class="shop-row"><span class="ico">📍</span><span><b>Seven Times Vaulx-en-Velin</b><br>23 Rue des Sept Chemins, 69120 Vaulx-en-Velin</span></div>'
+  + '<div class="shop-row"><span class="ico">🕒</span><span>Dim-Jeu : <b>11h - 02h</b><br>Vendredi : <b>15h - 02h</b><br>Samedi : <b>11h - 02h</b></span></div>'
+  + '<div class="shop-row"><span class="ico">📞</span><span><b>+33 6 15 27 69 60</b></span></div>'
+  + '<div class="halal-badge">🥩 Halal certifié AVS + ACHAHADA</div>'
+  + '<div class="shop-actions">'
+  +   '<a class="shop-btn primary" href="tel:+33615276960">📞 Appeler</a>'
+  +   '<a class="shop-btn secondary" href="https://www.google.com/maps/search/?api=1&query=Seven+Times+23+Rue+des+Sept+Chemins+69120+Vaulx-en-Velin" target="_blank" rel="noopener">📍 Itinéraire</a>'
+  + '</div>';
+  chatEl.appendChild(card);
 }
 
 function initialMessage(){
@@ -1666,6 +1706,7 @@ inputEl.addEventListener('focus', () => setTimeout(syncBodyToViewport, 100));
 inputEl.addEventListener('blur', () => setTimeout(syncBodyToViewport, 100));
 syncBodyToViewport();
 
+injectShopInfo();
 initialMessage();
 </script>
 </body>
