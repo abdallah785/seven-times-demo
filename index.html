@@ -405,10 +405,6 @@ const ITEMS = [
   { id:'sprite', name:'Sprite 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['sprite'] },
   { id:'perrier', name:'Perrier 33cl', price:2.80, desc:"Eau gazeuse 33cl", cat:'boisson', kw:['perrier','gazeuse'] },
   { id:'evian', name:'Evian 50cl', price:2.80, desc:"Bouteille 50cl eau plate", cat:'boisson', kw:['evian','eau plate','eau','minerale']  },
-  { id:'coca-verre', name:'Coca-Cola en verre', price:3.50, desc:"Bouteille verre", cat:'boisson', kw:['coca verre','bouteille coca'] },
-  { id:'orangina-verre', name:'Orangina en verre', price:3.50, desc:"Bouteille verre", cat:'boisson', kw:['orangina'] },
-  { id:'coca-1-5l', name:'Coca-Cola 1,5L', price:4.50, desc:"Bouteille 1,5L", cat:'boisson', kw:['coca 1.5','coca 1,5','grande coca'] },
-  { id:'oasis-2l', name:'Oasis Tropical 2L', price:4.90, desc:"Bouteille 2L", cat:'boisson', kw:['oasis 2l'] },
   { id:'palestine-cola', name:'Palestine Cola 33cl', price:2.80, desc:"Canette 33cl", cat:'boisson', kw:['palestine','palestine cola'] }
 ];
 
@@ -575,12 +571,9 @@ function parseFullOrder(rawMsg){
   // Boisson (Seven Times en vend beaucoup)
   if(/coca cherry|cherry/.test(n)) found.drink = get('coca-cherry');
   else if(/coca zero|cola zero|\bzero\b/.test(n)) found.drink = get('coca-zero');
-  else if(/grande coca|coca 1[.,]5|1[.,]5l/.test(n)) found.drink = get('coca-1-5l');
-  else if(/coca verre|bouteille coca/.test(n)) found.drink = get('coca-verre');
   else if(/palestine/.test(n)) found.drink = get('palestine-cola');
   else if(/coca|cola/.test(n)) found.drink = get('coca');
   else if(/sprite/.test(n)) found.drink = get('sprite');
-  else if(/oasis 2l/.test(n)) found.drink = get('oasis-2l');
   else if(/oasis tropical|oasis trop/.test(n)) found.drink = get('oasis-tropical');
   else if(/oasis fraise|fraise framboise/.test(n)) found.drink = get('oasis-fraise');
   else if(/oasis pomme|pomme poire/.test(n)) found.drink = get('oasis-pomme');
@@ -589,7 +582,6 @@ function parseFullOrder(rawMsg){
   else if(/schweppes|agrumes/.test(n)) found.drink = get('schweppes');
   else if(/hawai|hawaï/.test(n)) found.drink = get('hawai');
   else if(/ice ?tea|icetea|the glace|thé glacé/.test(n)) found.drink = get('ice-tea');
-  else if(/orangina/.test(n)) found.drink = get('orangina-verre');
   else if(/perrier|gazeuse/.test(n)) found.drink = get('perrier');
   else if(/mojito fraise/.test(n)) found.drink = get('citro-mojito-fraise');
   else if(/mojito|citronnade mojito/.test(n)) found.drink = get('citro-mojito');
@@ -1474,19 +1466,28 @@ function handleOrderFlow(rawMsg, msg){
     }
     // Cats Seven Times : on cherche dans tout sauf burger/whoop (déjà commandés)
     const SEARCH_CATS = ['boisson','tea','dessert','petite-faim','sandwich','naan','tacos','salade','pasta','brasserie','menu-duo','menu-family','menu-kids'];
-    // 1) Match exact via findItem (best match)
-    const exact = findItem(rawMsg, SEARCH_CATS);
-    // 2) Toutes les variantes possibles
-    const variants = findItemVariants(rawMsg, SEARCH_CATS);
-    // Si exact a une kw ≥ 2 mots qui matche EXACTEMENT le msg → ajout direct.
-    // (ex: "oasis tropical" → kw='oasis tropical' = match parfait spécifique)
-    // Mais "oasis" seul (kw='oasis' = 1 mot) → on désambigüe entre les 3 Oasis.
     const msgClean = normalize(rawMsg).trim();
-    const exactPerfect = exact && exact.kw.some(k => {
+    // 0) BUG A FIX : si rawMsg = nom complet d'un item → ajout direct (court-circuit boucle clic)
+    const exactByName = ITEMS.find(it => normalize(it.name).trim() === msgClean);
+    // 1) Match exact via findItem (best kw match)
+    const exact = exactByName || findItem(rawMsg, SEARCH_CATS);
+    // 2) Toutes les variantes possibles
+    let variants = findItemVariants(rawMsg, SEARCH_CATS);
+    // BUG B FIX : filtrer les variantes par "famille" (le 1er mot significatif du msg)
+    // Ex: "oasis" → ne garder que les items dont le nom contient "oasis"
+    //     évite de mélanger Oasis + Tropico (qui matchait via 'tropical')
+    const FAMILIES = ['oasis','tropico','coca','tea','mojito','citronnade','curacao','tiramisu','fanta','schweppes','salade','tropical','hibiscus','pasteque','mangue','wrap','escalope','chicken','wings','tenders','nuggets','naan','duo','menu','poulet','smash','whoop','brochettes','burger'];
+    const fam = FAMILIES.find(f => msgClean.split(/\s+/).some(w => w === f || w.startsWith(f)));
+    if(fam){
+      const filtered = variants.filter(v => normalize(v.name).includes(fam));
+      if(filtered.length > 0) variants = filtered;
+    }
+    // 3) Si exact (par nom complet OU kw ≥ 2 mots = msg) → ajout direct
+    const exactPerfect = exactByName || (exact && exact.kw.some(k => {
       const nk = normalize(k).trim();
       return nk === msgClean && nk.split(/\s+/).length >= 2;
-    });
-    // Si plusieurs variantes ET pas de match parfait spécifique → désambiguïsation
+    }));
+    // Si plusieurs variantes ET pas de match parfait → désambiguïsation
     if(variants.length > 1 && !exactPerfect){
       const choices = variants.slice(0, 8).map(v => ({
         label: v.name + ' ' + v.price.toFixed(2).replace('.',',') + '€',
@@ -1502,7 +1503,7 @@ function handleOrderFlow(rawMsg, msg){
                   : 'Plusieurs choix possibles, lequel ?';
       return botReply(intro, true, 500, choices);
     }
-    // 3) Match unique → ajout direct
+    // 4) Match unique → ajout direct
     const item = exact || variants[0];
     if(!item){
       const altReply = handleAlternativeDrinks(msg);
