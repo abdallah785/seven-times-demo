@@ -541,8 +541,10 @@ function parseFullOrder(rawMsg){
   }
 
   // Side / petite faim
-  if(/frite|fries/.test(n)) found.side = get('frites') || get('mozza-sticks'); // pas de "Frites" standalone chez Seven
-  else if(/tenders/.test(n)) found.side = get('tenders');
+  // Note : Seven Times n'a PAS de "Frites" standalone — les frites sont dans Duos/Menus.
+  // Si "frites" mentionné, on flag pour suggérer un Duo dans handleFullOrder.
+  if(/frite|fries/.test(n)) found.wantFries = true;
+  if(/tenders/.test(n)) found.side = get('tenders');
   else if(/nuggets/.test(n)) found.side = get('nuggets');
   else if(/mozza/.test(n)) found.side = get('mozza-sticks');
   else if(/jalapenos|jalapeno/.test(n)) found.side = get('jalapenos');
@@ -760,13 +762,13 @@ function getSmartSuggestion(rawMsg, msg){
   }
   // BOISSONS
   if(any(msg, [' boire','soif','boisson','drink','quoi boire']) && !any(msg,['avec'])){
-    return { text:"🥤 On a une grande sélection :", choices:[
+    return { text:"🥤 <b>SOFTS 33cl</b> — 2,80€ chacun :<br>Coca / Coca Zéro / Coca Cherry / Sprite / Fanta Orange / Tropico Original / Tropico Tropical / Oasis Tropical / Oasis Fraise Framboise / Oasis Pomme Poire / Ice Tea / Schweppes Agrumes / Hawaï / <b>Palestine Cola</b> / Perrier<br><br>🍵 <b>TEA & CITRONNADE</b> — 5,90€ chacun :<br>Tea Hibiscus / Tea Pastèque / Tea Pêche Mangue / Citronnade Mojito / Mojito Fraise / Curaçao Gingembre", choices:[
       {label:'Coca 2,80€', value:'Coca'},
       {label:'Sprite 2,80€', value:'Sprite'},
+      {label:'Fanta Orange 2,80€', value:'Fanta Orange'},
       {label:'Oasis Tropical 2,80€', value:'Oasis Tropical'},
       {label:'Ice Tea 2,80€', value:'Ice Tea'},
-      {label:'Schweppes 2,80€', value:'Schweppes'},
-      {label:'Perrier 2,80€', value:'Perrier'},
+      {label:'Palestine Cola 2,80€', value:'Palestine Cola'},
       {label:'Mojito 5,90€', value:'Citronnade Mojito'},
       {label:'Tea Hibiscus 5,90€', value:'Tea Hibiscus'}
     ] };
@@ -911,7 +913,7 @@ function processMessage(rawMsg){
 
   // === PARSING COMPLET (burger + boisson + side dans une seule phrase) ===
   const parsed = parseFullOrder(rawMsg);
-  if(parsed.burger && (parsed.drink || parsed.side || parsed.hasMenu)){
+  if(parsed.burger && (parsed.drink || parsed.side || parsed.hasMenu || parsed.wantFries)){
     return handleFullOrder(parsed);
   }
   // Plusieurs items sans burger principal : ex "tenders et un coca"
@@ -983,6 +985,26 @@ function processMessage(rawMsg){
     }
   }
 
+  // Intent "frites" (standalone) — Seven Times n'a pas de Frites seules
+  if(/^(frite|frites|fries|des frites|une frite|les frites)\s*\??$/i.test(rawMsg.trim()) || /\bfrites?\b/.test(msg) && !findItem(rawMsg)){
+    return botReply("Les frites ne sont pas vendues seules chez Seven Times — elles sont incluses dans :<br>🍟 Tous nos <b>Duos</b> (14,90€ → 15,90€)<br>🍟 Le <b>Menu Family</b> (31,90€)<br>🍟 Le <b>Tacos</b> (8,90€)<br>🍟 Le <b>Menu Kids</b> (8,00€)<br><br>Tu veux voir lequel ?", true, 800, [
+      {label:'🎁 Duo 7 — Big+Cheese 14,90€', value:'Duo 7'},
+      {label:'👶 Menu Kids 8€', value:'Menu Kids'},
+      {label:'🌯 Tacos 8,90€', value:'Tacos'},
+      {label:'📋 Voir tous les Duos', value:'duos'}
+    ]);
+  }
+
+  // Intent "sauce"
+  if(/^sauce|^les sauces|quelle sauce|sauces dispo/.test(msg) || /\bsauces?\b/.test(msg) && !findItem(rawMsg)){
+    return botReply("Tu peux choisir ta sauce dans nos <b>sandwichs</b>, <b>naans</b> et <b>tacos</b> 🌶️<br><br>Sauces dispo : <b>algérienne</b>, <b>blanche</b>, <b>samouraï</b>, <b>ketchup</b>, <b>mayo</b>, <b>barbecue</b>, <b>harissa</b>, <b>biggy</b>, <b>andalouse</b>.<br><br>Tu prends quoi ?", true, 800, [
+      {label:'🌯 Tacos 8,90€', value:'Tacos'},
+      {label:'🧀 Naan Tandoori 12,70€', value:'Naan Tandoori'},
+      {label:'🥖 Sandwich Curry 12,30€', value:'Curry'},
+      {label:'📋 Voir le menu', value:'le menu'}
+    ]);
+  }
+
   // Commander (sans plat précisé)
   if(any(msg, ['command','je veux','je voudrais','aimerais','souhaite','order','j ai faim','passer','prendre','manger'])){
     return startOrder();
@@ -1038,12 +1060,23 @@ function handleFullOrder(parsed){
   chatState.step = 'order_mode';
 
   // Astuce commerciale : suggérer un Duo si applicable
+  // Frites mentionnées mais pas dispo en standalone → on signale le Duo correspondant
   let duoHint = "";
-  if(qty === 1 && parsed.drink){
-    if(/big/i.test(burger.name)){
-      duoHint = "<br><br>💡 <i>Astuce : le <b>Duo 7</b> (Big + Cheese) à 14,90€ inclut frites + boisson.</i>";
-    } else if(/géant|geant/i.test(burger.name)){
-      duoHint = "<br><br>💡 <i>Astuce : le <b>Duo 8</b> (Géant + Cheese) à 14,90€ inclut frites + boisson.</i>";
+  if(qty === 1){
+    if(parsed.wantFries){
+      if(/big/i.test(burger.name)){
+        duoHint = "<br><br>💡 <i>On n'a pas les frites seules — mais le <b>Duo 7</b> (Big + Cheese + frites + boisson) à <b>14,90€</b> les inclut. Tape \"Duo 7\" pour switcher.</i>";
+      } else if(/géant|geant/i.test(burger.name)){
+        duoHint = "<br><br>💡 <i>On n'a pas les frites seules — mais le <b>Duo 8</b> (Géant + Cheese + frites + boisson) à <b>14,90€</b> les inclut. Tape \"Duo 8\" pour switcher.</i>";
+      } else {
+        duoHint = "<br><br>💡 <i>On n'a pas les frites seules — elles sont incluses dans nos <b>9 Duos</b> (14,90€/15,90€), le <b>Menu Family</b> (31,90€), le <b>Tacos</b> (8,90€) ou le <b>Menu Kids</b> (8€).</i>";
+      }
+    } else if(parsed.drink){
+      if(/big/i.test(burger.name)){
+        duoHint = "<br><br>💡 <i>Astuce : le <b>Duo 7</b> (Big + Cheese) à <b>14,90€</b> inclut frites + boisson.</i>";
+      } else if(/géant|geant/i.test(burger.name)){
+        duoHint = "<br><br>💡 <i>Astuce : le <b>Duo 8</b> (Géant + Cheese) à <b>14,90€</b> inclut frites + boisson.</i>";
+      }
     }
   }
 
@@ -1114,7 +1147,7 @@ function handleOrderFlow(rawMsg, msg){
     if(/^(oui|yes|ouep|ok|d ?accord|go|c est bon|valide|confirme|👍|je le prends|je prends)/.test(msg.trim())){
       const it = chatState.order.pendingItem;
       // Si c'est déjà un menu complet, l'ajouter direct au panier (pas de "menu/seul")
-      if(it.cat === 'menu'){
+      if(['menu','menu-duo','menu-family','menu-kids','brasserie','pasta','salade','tacos','naan','sandwich','dessert','tea','boisson','petite-faim'].includes(it.cat)){
         chatState.order.items.push({...it});
         chatState.order.pendingItem = null;
         chatState.step = 'order_mode';
@@ -1177,12 +1210,12 @@ function handleOrderFlow(rawMsg, msg){
         return botReply("✅ <b>"+item.name+"</b> en menu (+frites + boisson)<br>Quelle boisson ?", true, 700, [
           {label:'Coca 2,80€', value:'Coca'},
           {label:'Sprite 2,80€', value:'Sprite'},
-          {label:'Fanta Orange 2,20€', value:'Fanta Orange'},
-          {label:'Tropico Tropical', value:'Tropico Tropical'},
-          {label:'Fuze Tea Pêche', value:'Fuze Tea Pêche'},
+          {label:'Fanta Orange 2,80€', value:'Fanta Orange'},
+          {label:'Tropico Tropical 2,80€', value:'Tropico Tropical'},
+          {label:'Ice Tea 2,80€', value:'Ice Tea'},
           {label:'Evian 2,80€', value:'Evian'},
-          {label:'Mojito +2€', value:'Mojito'},
-          {label:'Tea Hibiscus +2€', value:'Tea Hibiscus'}
+          {label:'Mojito 5,90€', value:'Citronnade Mojito'},
+          {label:'Tea Hibiscus 5,90€', value:'Tea Hibiscus'}
         ]);
       }
       chatState.order.pendingItem = item;
@@ -1212,7 +1245,7 @@ function handleOrderFlow(rawMsg, msg){
   if(chatState.step === 'order_format'){
     const it = chatState.order.pendingItem;
     // Si pendingItem est déjà un menu complet, l'ajouter direct (filet de sécurité)
-    if(it && it.cat === 'menu'){
+    if(it && ['menu','menu-duo','menu-family','menu-kids','brasserie','pasta','salade','tacos','naan','sandwich','dessert','tea','boisson','petite-faim'].includes(it.cat)){
       chatState.order.items.push({...it});
       chatState.order.pendingItem = null;
       chatState.step = 'order_mode';
@@ -1226,12 +1259,12 @@ function handleOrderFlow(rawMsg, msg){
       return botReply("🍟 En menu, c'est noté ! Quelle boisson ?", true, 700, [
         {label:'Coca 2,80€', value:'Coca'},
         {label:'Sprite 2,80€', value:'Sprite'},
-        {label:'Fanta Orange 2,20€', value:'Fanta Orange'},
-        {label:'Tropico Tropical', value:'Tropico Tropical'},
-        {label:'Fuze Tea Pêche', value:'Fuze Tea Pêche'},
+        {label:'Fanta Orange 2,80€', value:'Fanta Orange'},
+        {label:'Tropico Tropical 2,80€', value:'Tropico Tropical'},
+        {label:'Ice Tea 2,80€', value:'Ice Tea'},
         {label:'Evian 2,80€', value:'Evian'},
-        {label:'Mojito +2€', value:'Mojito'},
-        {label:'Tea Hibiscus +2€', value:'Tea Hibiscus'}
+        {label:'Mojito 5,90€', value:'Citronnade Mojito'},
+        {label:'Tea Hibiscus 5,90€', value:'Tea Hibiscus'}
       ]);
     }
     if(any(msg, [' seul','tout seul',' juste','sans menu','sans frite','sans accompagnement'])){
@@ -1283,12 +1316,12 @@ function handleOrderFlow(rawMsg, msg){
       const drinkChoices = [
         {label:'Coca 2,80€', value:'Coca'},
         {label:'Sprite 2,80€', value:'Sprite'},
-        {label:'Fanta Orange 2,20€', value:'Fanta Orange'},
-        {label:'Tropico Tropical', value:'Tropico Tropical'},
-        {label:'Fuze Tea Pêche', value:'Fuze Tea Pêche'},
+        {label:'Fanta Orange 2,80€', value:'Fanta Orange'},
+        {label:'Tropico Tropical 2,80€', value:'Tropico Tropical'},
+        {label:'Ice Tea 2,80€', value:'Ice Tea'},
         {label:'Evian 2,80€', value:'Evian'},
-        {label:'Mojito +2€', value:'Mojito'},
-        {label:'Tea Hibiscus +2€', value:'Tea Hibiscus'}
+        {label:'Mojito 5,90€', value:'Citronnade Mojito'},
+        {label:'Tea Hibiscus 5,90€', value:'Tea Hibiscus'}
       ];
       if(altReply){
         return botReply(altReply, true, 700, drinkChoices);
@@ -1360,12 +1393,12 @@ function handleOrderFlow(rawMsg, msg){
       return botReply("🥤 Quelle boisson ?", true, 500, [
         {label:'Coca 2,80€', value:'Coca'},
         {label:'Sprite 2,80€', value:'Sprite'},
-        {label:'Fanta Orange 2,20€', value:'Fanta Orange'},
-        {label:'Tropico Tropical', value:'Tropico Tropical'},
-        {label:'Fuze Tea Pêche', value:'Fuze Tea Pêche'},
+        {label:'Fanta Orange 2,80€', value:'Fanta Orange'},
+        {label:'Tropico Tropical 2,80€', value:'Tropico Tropical'},
+        {label:'Ice Tea 2,80€', value:'Ice Tea'},
         {label:'Evian 2,80€', value:'Evian'},
-        {label:'Mojito 6,90€', value:'Mojito'},
-        {label:'Tea Hibiscus 6,90€', value:'Tea Hibiscus'}
+        {label:'Mojito 5,90€', value:'Citronnade Mojito'},
+        {label:'Tea Hibiscus 5,90€', value:'Tea Hibiscus'}
       ]);
     }
     if(msg.includes('dessert') && !findItem(rawMsg, ['dessert'])){
