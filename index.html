@@ -121,13 +121,21 @@
   .choice-btn:active{background:var(--primary);color:#fff;transform:scale(.96)}
   .choice-btn.disabled{opacity:.35;cursor:not-allowed;pointer-events:none;border-style:dashed}
 
-  /* Shop info card — scrollable, injectée en haut du chat */
+  /* Shop info card — scrollable, injectée en haut du chat (toggle via ℹ️) */
   .shop-card{
     background:#0d0d0d;border:1px solid #2a2a2a;border-radius:14px;
     padding:14px 16px;margin:4px 4px 14px;
     display:flex;flex-direction:column;gap:10px;
-    animation:fadeIn .35s ease-out
+    animation:fadeIn .35s ease-out;
+    max-height:600px;overflow:hidden;
+    transition:max-height .25s ease, padding .2s ease, margin .2s ease, opacity .2s ease, border-width .2s ease;
+    opacity:1
   }
+  .shop-card.collapsed{
+    max-height:0;padding-top:0;padding-bottom:0;margin-top:0;margin-bottom:0;
+    opacity:0;border-width:0;pointer-events:none
+  }
+  .icon-btn.active{background:rgba(0,0,0,.35)}
   .shop-card .shop-row{display:flex;align-items:flex-start;gap:10px;font-size:13.5px;line-height:1.45;color:#e8e8e8}
   .shop-card .shop-row .ico{font-size:16px;flex-shrink:0;line-height:1.3}
   .shop-card .shop-row b{color:#fff;font-weight:600}
@@ -260,6 +268,9 @@
     <div class="status"><span class="dot"></span>Assistant IA · Halal certifié</div>
   </div>
   <div class="header-icons">
+    <button class="icon-btn" onclick="toggleShopInfo()" aria-label="Infos restaurant" id="info-btn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    </button>
     <button class="icon-btn" onclick="resetChat()" aria-label="Recommencer">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
     </button>
@@ -1662,6 +1673,9 @@ function resetChat(){
 function injectShopInfo(){
   const card = document.createElement('div');
   card.className = 'shop-card';
+  card.id = 'shop-card';
+  // Restaurer l'état précédent (collapsed/expanded) depuis localStorage
+  if(localStorage.getItem('seven-shop-collapsed') === '1') card.classList.add('collapsed');
   card.innerHTML =
     '<div class="shop-row"><span class="ico">📍</span><span><b>Seven Times Vaulx-en-Velin</b><br>23 Rue des Sept Chemins, 69120 Vaulx-en-Velin</span></div>'
   + '<div class="shop-row"><span class="ico">🕒</span><span>Dim-Jeu : <b>11h - 02h</b><br>Vendredi : <b>15h - 02h</b><br>Samedi : <b>11h - 02h</b></span></div>'
@@ -1672,6 +1686,19 @@ function injectShopInfo(){
   +   '<a class="shop-btn secondary" href="https://www.google.com/maps/search/?api=1&query=Seven+Times+23+Rue+des+Sept+Chemins+69120+Vaulx-en-Velin" target="_blank" rel="noopener">📍 Itinéraire</a>'
   + '</div>';
   chatEl.appendChild(card);
+  // Sync visuel du bouton ℹ️
+  const btn = document.getElementById('info-btn');
+  if(btn) btn.classList.toggle('active', !card.classList.contains('collapsed'));
+}
+
+function toggleShopInfo(){
+  const card = document.getElementById('shop-card');
+  if(!card) return;
+  const willCollapse = !card.classList.contains('collapsed');
+  card.classList.toggle('collapsed', willCollapse);
+  try { localStorage.setItem('seven-shop-collapsed', willCollapse ? '1' : '0'); } catch(e) {}
+  const btn = document.getElementById('info-btn');
+  if(btn) btn.classList.toggle('active', !willCollapse);
 }
 
 function initialMessage(){
